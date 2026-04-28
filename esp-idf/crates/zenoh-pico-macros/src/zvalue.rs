@@ -43,7 +43,7 @@ struct ZLoanAttr {
 }
 
 #[derive(FromMeta, Default, Clone)]
-#[darling(default)]
+#[darling(default, from_word = || FromMeta::from_list(&[]))]
 struct ZTakeAttr {
     zfn: Option<Path>,
 }
@@ -392,10 +392,11 @@ impl AttrPaths for Option<ZTakeAttr> {
 
         let ztake_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZTake);
         let ztake_impl = &input.impl_signature(Some(&ztake_trait.to_token_stream()));
+        let zloan_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZLoan);
         let zenoh_error_ty: Path = parse_quote!(#zenoh_pico::result::ZenohError);
         let zresult_trait: Path = parse_quote!(#zenoh_pico::result::ZResult);
         let try_from_impl = &input.impl_signature(Some(
-            &quote! { ::core::convert::TryFrom<*const <Self as ZLoan>::LoanedValue> },
+            &quote! { ::core::convert::TryFrom<*mut <Self as #zloan_trait>::LoanedValue> },
         ));
 
         Ok(quote! {
@@ -404,14 +405,14 @@ impl AttrPaths for Option<ZTakeAttr> {
             #try_from_impl {
                 type Error = #zenoh_error_ty;
 
-                fn try_from(value: *mut <Self as ZLoan>::LoanedValue) -> ::core::result::Result<Self, Self::Error> {
+                fn try_from(value: *mut <Self as #zloan_trait>::LoanedValue) -> ::core::result::Result<Self, Self::Error> {
                     use #zresult_trait as _;
 
-                    let mut value = #zvalue_ty::default();
+                    let mut zvalue = #zvalue_ty::default();
                     unsafe {
-                        #ztake_fn(&mut value, value).zresult(())?;
+                        #ztake_fn(&mut zvalue, value).zresult(())?;
                     }
-                    ::core::result::Result::Ok(Self::from(closure))
+                    ::core::result::Result::Ok(Self::from(zvalue))
                 }
             }
         })
