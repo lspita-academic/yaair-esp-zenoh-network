@@ -20,7 +20,7 @@ use crate::{
     zbytes::ZBytes,
 };
 
-#[zwrap(base(name = "sample"), zvalue, zown, ztake)]
+#[zwrap(base(name = "sample"), zvalue, zown, zclone)]
 pub struct Sample;
 
 #[zwrap(base(name = "closure_sample"), zvalue, zown, zclosure)]

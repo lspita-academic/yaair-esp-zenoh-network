@@ -1,4 +1,4 @@
-use std::{error::Error, ffi::c_void, fmt::Debug, sync::Arc};
+use std::{ffi::c_void, fmt::Debug, sync::Arc};
 
 use embassy_sync::{blocking_mutex::raw::RawMutex, signal::Signal};
 
@@ -34,10 +34,8 @@ pub trait ZOwn: ZValue {
     fn zdrop(&mut self);
 }
 
-pub trait ZTake: ZOwn {
-    type Error: Error;
-
-    fn ztake(loan_mut: *mut Self::Value) -> Result<Self, Self::Error>;
+pub trait ZClone: ZOwn {
+    fn zclone(loan: *const Self::Value) -> Self;
 }
 
 pub trait ZClosure: ZOwn {
@@ -48,15 +46,15 @@ pub trait ZClosure: ZOwn {
         context: Option<Arc<T>>,
     ) -> ZenohResult<Self>;
 
-    fn from_signal<M: RawMutex, T: ZTake<Value = Self::CallbackValue>>(
-        signal: Arc<Signal<M, Result<T, T::Error>>>,
+    fn from_signal<M: RawMutex, T: ZValue<Value = Self::CallbackValue>>(
+        signal: Arc<Signal<M, T>>,
     ) -> ZenohResult<Self> {
-        unsafe extern "C" fn zclosure_signal_callback<M: RawMutex, T: ZTake>(
+        unsafe extern "C" fn zclosure_signal_callback<M: RawMutex, T: ZValue>(
             value: *mut T::Value,
             context: *mut c_void,
         ) {
-            let signal = unsafe { &mut *(context as *mut Signal<M, Result<T, T::Error>>) };
-            let value = T::ztake(value);
+            let signal = unsafe { &mut *(context as *mut Signal<M, T>) };
+            let value = T::from_zvalue(unsafe { *value });
             signal.signal(value);
         }
 

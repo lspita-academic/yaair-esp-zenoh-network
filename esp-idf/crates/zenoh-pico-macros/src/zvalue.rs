@@ -81,11 +81,11 @@ struct ZOwnAttr {
 
 #[derive(FromMeta, Default)]
 #[darling(default, from_word = default_meta_from_word)]
-struct ZTakeAttr {
+struct ZCloneAttr {
     base: Option<TypeBase>,
-    take_zfn: Option<Path>,
+    clone_zfn: Option<Path>,
     #[darling(default = impl_trait_attr_default)]
-    impl_try_from: bool,
+    impl_clone: bool,
 }
 
 #[derive(FromMeta, Default)]
@@ -102,9 +102,7 @@ pub struct ZWrapConfig {
     base: Option<TypeBase>,
     zvalue: Option<ZValueAttr>,
     zown: Option<ZOwnAttr>,
-    // zloan: Option<ZLoanAttr>,
-    // zloan_mut: Option<ZLoanMutAttr>,
-    ztake: Option<ZTakeAttr>,
+    zclone: Option<ZCloneAttr>,
     zclosure: Option<ZClosureAttr>,
 }
 
@@ -419,52 +417,40 @@ impl ZWrapAttrTokens for ZOwnAttr {
     }
 }
 
-impl ZWrapAttrTokens for ZTakeAttr {
+impl ZWrapAttrTokens for ZCloneAttr {
     fn to_tokens(&self, input: &ZWrapInput, params: &ZWrapParams) -> syn::Result<TokenStream> {
         let &ZWrapParams { zenoh_pico, .. } = &params;
 
-        let take_zfn = params.path_or_sys_default(
-            self.take_zfn.as_ref(),
-            |b| format_ident!("z_{b}_take_from_loaned"),
+        let clone_zfn = params.path_or_sys_default(
+            self.clone_zfn.as_ref(),
+            |b| format_ident!("z_{b}_clone"),
             self.base.as_ref(),
         )?;
 
-        let ztake_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZTake);
-        let ztake_impl = &input.impl_signature(Some(&ztake_trait.to_token_stream()));
+        let zclone_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZClone);
+        let zclone_impl = &input.impl_signature(Some(&zclone_trait.to_token_stream()));
         let zvalue_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZValue);
         let zown_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZOwn);
-        let zenoh_error_ty: Path = parse_quote!(#zenoh_pico::result::ZenohError);
-        let result_ty: Path = parse_quote!(::core::result::Result);
-        let zresult_trait: Path = parse_quote!(#zenoh_pico::result::IntoZenohResult);
 
         let mut tokens = quote! {
-            #ztake_impl {
-                type Error = #zenoh_error_ty;
-
-                fn ztake(loan_mut: *mut <Self as #zvalue_trait>::Value) -> #result_ty<Self, Self::Error> {
-                    use #zresult_trait as _;
-
+            #zclone_impl {
+                fn zclone(loan: *const <Self as #zvalue_trait>::Value) -> Self {
                     let mut value = <Self as #zvalue_trait>::uninitialized();
-                    <Self as #zown_trait>
-                        ::inspect_zowned_mut(
-                            &mut value,
-                            |z| unsafe { #take_zfn(z, loan_mut).into_zresult() },
-                        )
-                        .map(|_| value)
+                    <Self as #zown_trait>::inspect_zowned_mut(
+                        &mut value,
+                        |z| unsafe { #clone_zfn(z, loan) },
+                    );
+                    value
                 }
             }
         };
-        if self.impl_try_from {
-            let try_from_impl = &input.impl_signature(Some(
-                &quote! { ::core::convert::TryFrom<*mut <Self as #zvalue_trait>::Value> },
-            ));
+        if self.impl_clone {
+            let clone_impl = &input.impl_signature(Some(&quote! { ::core::clone::Clone }));
 
             tokens.extend(quote! {
-                #try_from_impl {
-                    type Error = <Self as #ztake_trait>::Error;
-
-                    fn try_from(value: *mut <Self as #zvalue_trait>::Value) -> #result_ty<Self, Self::Error> {
-                        <Self as #ztake_trait>::ztake(value)
+                #clone_impl {
+                    fn clone(&self) -> Self {
+                        <Self as #zclone_trait>::zclone(<Self as #zvalue_trait>::zloan(self))
                     }
                 }
             });
@@ -564,9 +550,7 @@ pub fn zwrap(input: ZWrapInput, config: ZWrapConfig) -> syn::Result<TokenStream>
     let attributes: [Option<&dyn ZWrapAttrTokens>; _] = [
         config.zvalue.as_ref().map(|a| a as _),
         config.zown.as_ref().map(|a| a as _),
-        // config.zloan.as_ref().map(|a| a as _),
-        // config.zloan_mut.as_ref().map(|a| a as _),
-        config.ztake.as_ref().map(|a| a as _),
+        config.zclone.as_ref().map(|a| a as _),
         config.zclosure.as_ref().map(|a| a as _),
     ];
     for a in attributes {

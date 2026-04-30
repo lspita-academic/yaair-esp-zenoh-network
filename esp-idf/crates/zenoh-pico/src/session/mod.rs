@@ -1,6 +1,7 @@
 pub mod config;
 pub mod locator;
 pub mod publisher;
+pub mod scouting;
 pub mod subscriber;
 pub mod whatami;
 

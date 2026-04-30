@@ -24,7 +24,7 @@ pub struct Subscriber {
     /// fields cannot be moved out and consumed because of the shared reference,
     /// it would require reimplementing what the zown macro does manually.
     _subscriber: InternalSubscriber,
-    signal: Arc<Signal<CriticalSectionRawMutex, ZenohResult<Sample>>>,
+    signal: Arc<Signal<CriticalSectionRawMutex, Sample>>,
 }
 
 impl Subscriber {
@@ -52,7 +52,7 @@ impl Subscriber {
         })
     }
 
-    pub async fn recv_async(&self) -> ZenohResult<Sample> {
+    pub async fn recv_async(&self) -> Sample {
         self.signal.wait().await
     }
 }
