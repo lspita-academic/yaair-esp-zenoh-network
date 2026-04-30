@@ -3,14 +3,15 @@ use std::ptr::NonNull;
 use ffi_utils::pointer::NonNullExtensions;
 use zenoh_pico_core::{
     sys::{
-        z_sample_attachment, z_sample_kind, z_sample_kind_t, z_sample_kind_t_Z_SAMPLE_KIND_DELETE,
-        z_sample_kind_t_Z_SAMPLE_KIND_PUT, z_sample_timestamp,
+        z_sample_attachment, z_sample_encoding, z_sample_kind, z_sample_kind_t,
+        z_sample_kind_t_Z_SAMPLE_KIND_DELETE, z_sample_kind_t_Z_SAMPLE_KIND_PUT,
+        z_sample_timestamp,
     },
     zvalue::ZValue,
 };
 use zenoh_pico_macros::zwrap;
 
-use crate::{timestamp::Timestamp, zbytes::ZBytes};
+use crate::{encoding::Encoding, timestamp::Timestamp, zbytes::ZBytes};
 
 #[zwrap(base(name = "sample"), zvalue, zown, ztake)]
 pub struct Sample;
@@ -36,11 +37,15 @@ impl Sample {
 
     pub fn timestamp(&self) -> Option<&Timestamp> {
         NonNull::from_ptr(unsafe { z_sample_timestamp(self.zloan()) })
-            .map(|nn| Timestamp::from_raw(nn.as_ptr()))
+            .map(|nn| Timestamp::from_ptr(nn.as_ptr()))
     }
 
     pub fn attachment(&self) -> Option<&ZBytes> {
         NonNull::from_ptr(unsafe { z_sample_attachment(self.zloan()) })
-            .map(|nn| ZBytes::from_raw(nn.as_ptr()))
+            .map(|nn| ZBytes::from_ptr(nn.as_ptr()))
+    }
+
+    pub fn encoding(&self) -> &Encoding {
+        Encoding::from_ptr(unsafe { z_sample_encoding(self.zloan()) })
     }
 }

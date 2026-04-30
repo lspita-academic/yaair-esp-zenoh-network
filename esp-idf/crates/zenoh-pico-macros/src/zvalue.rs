@@ -225,11 +225,11 @@ impl ZWrapAttrTokens for ZValueAttr {
                     Self(value)
                 }
 
-                fn from_raw<'a>(ptr: *const Self::Value) -> &'a Self {
+                fn from_ptr<'a>(ptr: *const Self::Value) -> &'a Self {
                     unsafe { &*(ptr as *const Self) }
                 }
 
-                fn from_raw_mut<'a>(ptr: *mut Self::Value) -> &'a mut Self {
+                fn from_ptr_mut<'a>(ptr: *mut Self::Value) -> &'a mut Self {
                     unsafe { &mut *(ptr as *mut Self) }
                 }
 

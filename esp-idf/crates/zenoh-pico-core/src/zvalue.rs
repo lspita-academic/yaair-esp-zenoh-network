@@ -13,8 +13,8 @@ pub trait ZValue: Sized {
 
     fn uninitialized() -> Self;
     fn from_zvalue(value: Self::Value) -> Self;
-    fn from_raw<'a>(ptr: *const Self::Value) -> &'a Self;
-    fn from_raw_mut<'a>(ptr: *mut Self::Value) -> &'a mut Self;
+    fn from_ptr<'a>(ptr: *const Self::Value) -> &'a Self;
+    fn from_ptr_mut<'a>(ptr: *mut Self::Value) -> &'a mut Self;
     fn zloan(&self) -> *const Self::Value;
     fn zloan_mut(&mut self) -> *mut Self::Value;
 }

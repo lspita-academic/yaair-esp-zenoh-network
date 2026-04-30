@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 
 use zenoh_pico_core::{
     result::IntoZenohResult,
@@ -17,7 +17,7 @@ impl Display for ZId {
         let mut string = ZString::uninitialized();
         string
             .inspect_zowned_mut(|z| unsafe { z_id_to_string(&self.0, z).into_zresult() })
-            .expect("System out of memory");
-        string.fmt(f)
+            .map_err(|_| fmt::Error)
+            .and_then(|_| string.fmt(f))
     }
 }
