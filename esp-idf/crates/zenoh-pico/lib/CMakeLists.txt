@@ -3,70 +3,71 @@ set(FRAG_MAX_SIZE $ENV{ZENOH_PICO_FRAG_MAX_SIZE})
 set(BATCH_UNICAST_SIZE $ENV{ZENOH_PICO_BATCH_UNICAST_SIZE})
 set(BATCH_MULTICAST_SIZE $ENV{ZENOH_PICO_BATCH_MULTICAST_SIZE})
 
-set(ZENOH_PICO_DIR $ENV{LIBS_DIR}/zenoh-pico)
+set(ZENOH_PICO_DIR ${CMAKE_CURRENT_LIST_DIR}/zenoh-pico)
 set(ZENOH_PICO_INCLUDE_DIR ${ZENOH_PICO_DIR}/include)
+set(ZENOH_PICO_SRC_DIR ${ZENOH_PICO_DIR}/src)
 set(ZENOH_PICO_HEADER ${ZENOH_PICO_INCLUDE_DIR}/zenoh-pico.h)
 set(ZENOH_PICO_LIBNAME "zenohpico")
 
 file(GLOB_RECURSE ZENOH_PICO_SRCS
-    "${ZENOH_PICO_DIR}/src/*"
+    "${ZENOH_PICO_SRC_DIR}/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_SRCS
-    "${ZENOH_PICO_DIR}/src/system/*"
+    "${ZENOH_PICO_SRC_DIR}/system/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_ARDUINO_SRCS
-    "${ZENOH_PICO_DIR}/src/system/arduino/*"
+    "${ZENOH_PICO_SRC_DIR}/system/arduino/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_ARDUINO_OPENCR_SRCS
-    "${ZENOH_PICO_DIR}/src/system/arduino/opencr/*"
+    "${ZENOH_PICO_SRC_DIR}/system/arduino/opencr/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_ARDUINO_ESP32_SRCS
-    "${ZENOH_PICO_DIR}/src/system/arduino/opencr/*"
+    "${ZENOH_PICO_SRC_DIR}/system/arduino/opencr/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_COMMON_SRCS
-    "${ZENOH_PICO_DIR}/src/system/common/*"
+    "${ZENOH_PICO_SRC_DIR}/system/common/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_EMSCRIPTEN_SRCS
-    "${ZENOH_PICO_DIR}/src/system/emscripten/*"
+    "${ZENOH_PICO_SRC_DIR}/system/emscripten/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_ESPIDF_SRCS
-    "${ZENOH_PICO_DIR}/src/system/espidf/*"
+    "${ZENOH_PICO_SRC_DIR}/system/espidf/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_FLIPPER_SRCS
-    "${ZENOH_PICO_DIR}/src/system/flipper/*"
+    "${ZENOH_PICO_SRC_DIR}/system/flipper/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_FREERTOS_SRCS
-    "${ZENOH_PICO_DIR}/src/system/freertos/*"
+    "${ZENOH_PICO_SRC_DIR}/system/freertos/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_FREERTOS_TCP_SRCS
-    "${ZENOH_PICO_DIR}/src/system/freertos/freertos_plus_tcp/*"
+    "${ZENOH_PICO_SRC_DIR}/system/freertos/freertos_plus_tcp/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_FREERTOS_LWIP_SRCS
-    "${ZENOH_PICO_DIR}/src/system/freertos/lwip/*"
+    "${ZENOH_PICO_SRC_DIR}/system/freertos/lwip/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_MBED_SRCS
-    "${ZENOH_PICO_DIR}/src/system/mbed/*"
+    "${ZENOH_PICO_SRC_DIR}/system/mbed/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_RPI_PICO_SRCS
-    "${ZENOH_PICO_DIR}/src/system/rpi_pico/*"
+    "${ZENOH_PICO_SRC_DIR}/system/rpi_pico/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_THREADX_SRCS
-    "${ZENOH_PICO_DIR}/src/system/threadx/*"
+    "${ZENOH_PICO_SRC_DIR}/system/threadx/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_THREADX_STM32_SRCS
-    "${ZENOH_PICO_DIR}/src/system/threadx/stm32/*"
+    "${ZENOH_PICO_SRC_DIR}/system/threadx/stm32/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_UNIX_SRCS
-    "${ZENOH_PICO_DIR}/src/system/unix/*"
+    "${ZENOH_PICO_SRC_DIR}/system/unix/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_UNIX_LINK_SRCS
-    "${ZENOH_PICO_DIR}/src/system/unix/link/*"
+    "${ZENOH_PICO_SRC_DIR}/system/unix/link/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_WINDOWS_SRCS
-    "${ZENOH_PICO_DIR}/src/system/windows/*"
+    "${ZENOH_PICO_SRC_DIR}/system/windows/*"
 )
 file(GLOB_RECURSE ZENOH_PICO_SYSTEM_ZEPHYR_SRCS
-    "${ZENOH_PICO_DIR}/src/system/zephyr/*"
+    "${ZENOH_PICO_SRC_DIR}/system/zephyr/*"
 )
 
 list(REMOVE_ITEM ZENOH_PICO_SRCS ${ZENOH_PICO_SYSTEM_SRCS})
@@ -78,8 +79,8 @@ list(APPEND ZENOH_PICO_COMPILE_DEFS
     BATCH_MULTICAST_SIZE=${BATCH_MULTICAST_SIZE}
 )
 
-set(ZENOH_PICO_COMPONENT_HEADER ${CMAKE_CURRENT_LIST_DIR}/zenoh-pico-wrapper.h)
-configure_file(${ZENOH_PICO_COMPONENT_HEADER}.in ${ZENOH_PICO_COMPONENT_HEADER} @ONLY)
+# set(ZENOH_PICO_COMPONENT_HEADER ${CMAKE_CURRENT_LIST_DIR}/zenoh-pico-wrapper.h)
+# configure_file(${ZENOH_PICO_COMPONENT_HEADER}.in ${ZENOH_PICO_COMPONENT_HEADER} @ONLY)
 
 list(APPEND ZENOH_PICO_SRCS ${ZENOH_PICO_SYSTEM_ESPIDF_SRCS})
 list(APPEND ZENOH_PICO_COMPILE_DEFS ZENOH_ESPIDF)

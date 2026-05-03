@@ -353,7 +353,7 @@ impl ZWrapAttrTokens for ZOwnAttr {
                 type OwnedValue = #owned_ty;
                 type MovedValue = #moved_ty;
 
-                fn inspect_zowned<F, T>(&self, f: F) -> T
+                fn with_zowned<F, T>(&self, f: F) -> T
                 where
                     F: FnOnce(&Self::OwnedValue) -> T,
                 {
@@ -362,7 +362,7 @@ impl ZWrapAttrTokens for ZOwnAttr {
                     f(&mut zowned)
                 }
 
-                fn inspect_zowned_mut<F, T>(&mut self, f: F) -> T
+                fn with_zowned_mut<F, T>(&mut self, f: F) -> T
                 where
                     F: FnOnce(&mut Self::OwnedValue) -> T,
                 {
@@ -377,14 +377,14 @@ impl ZWrapAttrTokens for ZOwnAttr {
                     <Self as #zvalue_trait>::from_zvalue(value.#owned_attr)
                 }
 
-                fn zmove(mut self) -> *mut Self::MovedValue {
-                    let moved = self.inspect_zowned_mut(|z| unsafe { #move_zfn(z) });
+                fn zmove(mut self) -> Self::MovedValue {
+                    let moved = self.with_zowned_mut(|z| unsafe { *#move_zfn(z) });
                     ::std::mem::forget(self);
                     moved
                 }
 
                 fn zdrop(&mut self) {
-                    self.inspect_zowned_mut(|z| unsafe { #drop_zfn(#move_zfn(z)) });
+                    self.with_zowned_mut(|z| unsafe { #drop_zfn(#move_zfn(z)) });
                 }
             }
         };
@@ -436,7 +436,7 @@ impl ZWrapAttrTokens for ZCloneAttr {
             #zclone_impl {
                 fn zclone(loan: *const <Self as #zvalue_trait>::Value) -> Self {
                     let mut value = <Self as #zvalue_trait>::uninitialized();
-                    <Self as #zown_trait>::inspect_zowned_mut(
+                    <Self as #zown_trait>::with_zowned_mut(
                         &mut value,
                         |z| unsafe { #clone_zfn(z, loan) },
                     );
@@ -515,7 +515,7 @@ impl ZWrapAttrTokens for ZClosureAttr {
 
                     let mut value = <Self as #zvalue_trait>::uninitialized();
                     <Self as #zown_trait>
-                        ::inspect_zowned_mut(
+                        ::with_zowned_mut(
                             &mut value,
                             |z| unsafe {
                                 #init_zfn(

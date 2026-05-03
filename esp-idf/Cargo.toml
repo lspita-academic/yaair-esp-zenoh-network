@@ -41,9 +41,7 @@ syn = "2.0"
 thiserror = "2.0"
 uhlc = "0.9"
 zenoh-pico = { path = "crates/zenoh-pico" }
-zenoh-pico-core = { path = "crates/zenoh-pico-core" }
 zenoh-pico-macros = { path = "crates/zenoh-pico-macros" }
-zenoh-pico-sys = { path = "crates/zenoh-pico-sys" }
 
 [profile.dev]
 opt-level = "z"

@@ -33,7 +33,7 @@ impl<'a> Deref for Wifi<'a> {
     }
 }
 
-impl DerefMut for Wifi<'_>  {
+impl DerefMut for Wifi<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -52,9 +52,9 @@ impl<'a> Wifi<'a> {
     }
 
     pub async fn connect_with_config(
-        &mut self,
+        mut self,
         config: &WifiConfig,
-    ) -> Result<WifiConnection<'a, '_>, EspError> {
+    ) -> Result<ConnectedWifi<'a>, EspError> {
         self.set_configuration(config)?;
         self.start().await?;
         log::info!("Wifi started");
@@ -64,15 +64,15 @@ impl<'a> Wifi<'a> {
 
         self.wait_netif_up().await?;
         log::info!("Wifi netif up");
-        Ok(WifiConnection(self))
+        Ok(ConnectedWifi(self))
     }
 }
 
-pub struct WifiConnection<'a, 'b>(&'b mut Wifi<'a>);
+pub struct ConnectedWifi<'a>(Wifi<'a>);
 
-impl<'a> WifiConnection<'a, '_> {
-    pub async fn disconnect(self) -> Result<(), EspError> {
-        self.0.disconnect().await
+impl<'a> ConnectedWifi<'a> {
+    pub async fn disconnect(mut self) -> Result<Wifi<'a>, EspError> {
+        self.0.disconnect().await.map(|_| self.0)
     }
 
     pub fn netif(&self) -> &EspNetif {

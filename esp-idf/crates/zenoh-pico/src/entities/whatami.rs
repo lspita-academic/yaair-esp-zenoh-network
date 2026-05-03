@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive, UnsafeFromPrimitive};
 use strum::{EnumCount, EnumIter, IntoEnumIterator};
-use zenoh_pico_core::sys::{
+
+use crate::sys::{
     z_whatami_t, z_whatami_t_Z_WHATAMI_CLIENT, z_whatami_t_Z_WHATAMI_PEER,
     z_whatami_t_Z_WHATAMI_ROUTER,
 };

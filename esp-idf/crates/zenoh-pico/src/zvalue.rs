@@ -25,15 +25,15 @@ pub trait ZOwn: ZValue {
     type OwnedValue: CType;
     type MovedValue: CType;
 
-    fn inspect_zowned<F, T>(&self, f: F) -> T
+    fn with_zowned<F, T>(&self, f: F) -> T
     where
         F: FnOnce(&Self::OwnedValue) -> T;
 
-    fn inspect_zowned_mut<F, T>(&mut self, f: F) -> T
+    fn with_zowned_mut<F, T>(&mut self, f: F) -> T
     where
         F: FnOnce(&mut Self::OwnedValue) -> T;
     fn from_zowned(value: Self::OwnedValue) -> Self;
-    fn zmove(self) -> *mut Self::MovedValue;
+    fn zmove(self) -> Self::MovedValue;
     fn zdrop(&mut self);
 }
 
@@ -56,7 +56,7 @@ pub trait ZClosure: ZOwn {
             value: *mut T::Value,
             context: *mut c_void,
         ) {
-            let signal = unsafe { &mut *(context as *mut Signal<M, T>) };
+            let signal = unsafe { &*(context as *mut Signal<M, T>) };
             let value = T::from_zvalue(unsafe { *value });
             signal.signal(value);
         }

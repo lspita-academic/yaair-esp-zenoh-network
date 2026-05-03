@@ -1,18 +1,18 @@
 use std::{
-    ffi::CStr,
-    fmt::{Display, Pointer},
+    fmt::{self, Display},
     str::FromStr,
 };
 
-use zenoh_pico_core::{
+use zenoh_pico_macros::zwrap;
+
+use crate::{
     result::{IntoZenohResult, ZenohError},
     sys::{
-        _z_string_svec_t, z_string_array_get, z_string_array_len, z_string_copy_from_substr,
-        z_string_data, z_string_len,
+        _z_string_equals, _z_string_svec_t, z_string_array_get, z_string_array_len,
+        z_string_copy_from_substr, z_string_data, z_string_len,
     },
     zvalue::{ZOwn, ZValue},
 };
-use zenoh_pico_macros::zwrap;
 
 #[zwrap(base(name = "string"), zvalue, zown)]
 pub struct ZString;
@@ -21,9 +21,9 @@ pub trait FromZStr
 where
     Self: Sized,
 {
-    type Error;
+    type Err;
 
-    fn from_zstr(s: &ZString) -> Result<Self, Self::Error>;
+    fn from_zstr(s: &ZString) -> Result<Self, Self::Err>;
 }
 
 impl ZString {
@@ -31,11 +31,7 @@ impl ZString {
         unsafe { z_string_len(self.zloan()) }
     }
 
-    pub fn as_cstr(&self) -> &CStr {
-        unsafe { CStr::from_ptr(z_string_data(self.zloan())) }
-    }
-
-    pub fn parse<T: FromZStr>(&self) -> Result<T, T::Error> {
+    pub fn parse<T: FromZStr>(&self) -> Result<T, T::Err> {
         T::from_zstr(self)
     }
 }
@@ -46,7 +42,7 @@ impl FromStr for ZString {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut zstring = Self::uninitialized();
         zstring
-            .inspect_zowned_mut(|z| unsafe {
+            .with_zowned_mut(|z| unsafe {
                 z_string_copy_from_substr(z, s.as_ptr(), s.len()).into_zresult()
             })
             .map(|_| zstring)
@@ -55,7 +51,15 @@ impl FromStr for ZString {
 
 impl Display for ZString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_cstr().fmt(f)
+        let slice = unsafe { std::slice::from_raw_parts(z_string_data(self.zloan()), self.len()) };
+        str::from_utf8(&slice).map_err(|_| fmt::Error)?.fmt(f)
+    }
+}
+
+impl Eq for ZString {}
+impl PartialEq for ZString {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { _z_string_equals(self.zloan(), other.zloan()) }
     }
 }
 
@@ -96,7 +100,7 @@ impl<'a> Iterator for ZStringArrayIter<'a> {
 }
 
 impl<'a> IntoIterator for &'a ZStringArray {
-    type Item = &'a ZString;
+    type Item = <Self::IntoIter as Iterator>::Item;
     type IntoIter = ZStringArrayIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {

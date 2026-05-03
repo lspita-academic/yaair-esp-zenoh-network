@@ -2,22 +2,20 @@ use std::sync::Arc;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use num_enum::UnsafeFromPrimitive;
-use zenoh_pico_core::{
+use zenoh_pico_macros::zwrap;
+
+use crate::{
+    config::ZenohConfig,
+    entities::whatami::WhatAmI,
     result::{IntoZenohResult, ZenohResult},
     sys::{
         z_hello_whatami, z_hello_zid, z_scout, z_scout_options_default, z_scout_options_t,
         zp_hello_locators,
     },
-    zvalue::{ZClosure, ZOwn, ZValue},
-};
-use zenoh_pico_macros::zwrap;
-
-use crate::{
-    config::ZenohConfig,
-    entities::{locator::Locator, whatami::WhatAmI},
     zid::ZId,
     zoptions::{ZOptionsInit, options_ptr},
     zstring::ZStringArray,
+    zvalue::{ZClosure, ZOwn, ZValue},
 };
 
 #[zwrap(base(name = "hello"), zvalue, zown)]
@@ -31,12 +29,8 @@ impl Hello {
         unsafe { WhatAmI::unchecked_transmute_from(z_hello_whatami(self.zloan())) }
     }
 
-    pub fn locators(&self) -> impl Iterator<Item = Locator> {
-        let locators_zstrings = ZStringArray::from_ptr(unsafe { zp_hello_locators(self.zloan()) });
-        locators_zstrings.into_iter().map(|s| {
-            s.parse()
-                .expect("locators array should contain valid locators")
-        })
+    pub fn locators(&self) -> &ZStringArray {
+        ZStringArray::from_ptr(unsafe { zp_hello_locators(self.zloan()) })
     }
 
     pub fn zid(&self) -> ZId {
@@ -66,7 +60,7 @@ impl Scout {
         let closure = HelloClosure::from_signal(signal.clone())?;
 
         unsafe {
-            z_scout(config.zmove(), closure.zmove(), scout_options).into_zresult()?;
+            z_scout(&mut config.zmove(), &mut closure.zmove(), scout_options).into_zresult()?;
         }
         Ok(Self { signal })
     }

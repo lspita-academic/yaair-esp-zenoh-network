@@ -1,4 +1,4 @@
-use zenoh_pico_core::zvalue::CType;
+use crate::zvalue::CType;
 
 pub trait ZOptionsDefault {
     fn zdefault() -> Self;

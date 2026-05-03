@@ -710,7 +710,7 @@ name = "esp-idf-config"
 version = "0.1.0"
 dependencies = [
  "embuild",
- "zenoh-pico-sys",
+ "zenoh-pico",
 ]
 
 [[package]]
@@ -740,7 +740,6 @@ dependencies = [
 name = "esp-idf-platform"
 version = "0.1.0"
 dependencies = [
- "embuild",
  "esp-idf-svc",
  "heapless 0.9.2",
  "log",
@@ -2341,21 +2340,15 @@ name = "zenoh-pico"
 version = "0.1.0"
 dependencies = [
  "embassy-sync 0.8.0",
+ "embuild",
+ "esp-idf-svc",
  "ffi-utils",
  "log",
  "num_enum",
  "strum 0.28.0",
+ "thiserror 2.0.18",
  "uhlc",
- "zenoh-pico-core",
  "zenoh-pico-macros",
-]
-
-[[package]]
-name = "zenoh-pico-core"
-version = "0.1.0"
-dependencies = [
- "embassy-sync 0.8.0",
- "zenoh-pico-sys",
 ]
 
 [[package]]
@@ -2368,14 +2361,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "zenoh-pico-sys"
-version = "0.1.0"
-dependencies = [
- "embuild",
- "esp-idf-svc",
 ]
 
 [[package]]
