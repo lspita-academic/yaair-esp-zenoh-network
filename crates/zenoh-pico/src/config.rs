@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Debug, Default, EnumString, Display)]
 #[strum(serialize_all = "snake_case")]
-pub enum ZenohConfigMode {
+pub enum ConfigMode {
     #[default]
     Client,
     Peer,
@@ -27,7 +27,7 @@ pub enum ZenohConfigMode {
 
 #[derive(IntoPrimitive, TryFromPrimitive, UnsafeFromPrimitive, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u32)]
-pub enum ZenohConfigKey {
+pub enum ConfigKey {
     ConfigMode = Z_CONFIG_MODE_KEY,
     Connect = Z_CONFIG_CONNECT_KEY,
     Listen = Z_CONFIG_LISTEN_KEY,
@@ -37,49 +37,49 @@ pub enum ZenohConfigKey {
     ScoutingMask = Z_CONFIG_SCOUTING_WHAT_KEY,
 }
 
-impl Into<u8> for ZenohConfigKey {
+impl Into<u8> for ConfigKey {
     fn into(self) -> u8 {
         Into::<u32>::into(self) as u8
     }
 }
 
 #[zwrap(base(name = "config"), zvalue, zown)]
-pub struct ZenohConfig;
+pub struct Config;
 
 #[derive(Default)]
-pub struct ZenohConfigBuilder {
-    options: BTreeMap<ZenohConfigKey, String>,
+pub struct ConfigBuilder {
+    options: BTreeMap<ConfigKey, String>,
 }
 
-impl ZenohConfigBuilder {
-    fn set(config: &mut ZenohConfig, key: ZenohConfigKey, value: String) -> ZenohResult<()> {
+impl ConfigBuilder {
+    fn set(config: &mut Config, key: ConfigKey, value: String) -> ZenohResult<()> {
         let value_cstring = CString::from_vec_maybe_nul(value);
         unsafe {
             zp_config_insert(config.zloan_mut(), key.into(), value_cstring.as_ptr()).into_zresult()
         }
     }
 
-    pub fn mode(mut self, mode: ZenohConfigMode) -> Self {
+    pub fn mode(mut self, mode: ConfigMode) -> Self {
         self.options
-            .insert(ZenohConfigKey::ConfigMode, mode.to_string());
+            .insert(ConfigKey::ConfigMode, mode.to_string());
         self
     }
 
     pub fn connect(mut self, locator: &str) -> Self {
         self.options
-            .insert(ZenohConfigKey::Connect, locator.to_string());
+            .insert(ConfigKey::Connect, locator.to_string());
         self
     }
 
     pub fn listen(mut self, locator: &str) -> Self {
         self.options
-            .insert(ZenohConfigKey::Listen, locator.to_string());
+            .insert(ConfigKey::Listen, locator.to_string());
         self
     }
 
     pub fn scouting_timeout(mut self, timeout: Duration) -> Self {
         self.options.insert(
-            ZenohConfigKey::ScoutingTimeout,
+            ConfigKey::ScoutingTimeout,
             timeout.borrow().as_millis().to_string(),
         );
         self
@@ -87,24 +87,24 @@ impl ZenohConfigBuilder {
 
     pub fn multicast_scouting(mut self, enable: bool) -> Self {
         self.options
-            .insert(ZenohConfigKey::MulticastScouting, enable.to_string());
+            .insert(ConfigKey::MulticastScouting, enable.to_string());
         self
     }
 
     pub fn multicast_locator(mut self, locator: &str) -> Self {
         self.options
-            .insert(ZenohConfigKey::MulticastLocator, locator.to_string());
+            .insert(ConfigKey::MulticastLocator, locator.to_string());
         self
     }
 
     pub fn scouting_mask(mut self, what_mask: WhatAmIMask) -> Self {
         self.options
-            .insert(ZenohConfigKey::ScoutingMask, what_mask.to_string());
+            .insert(ConfigKey::ScoutingMask, what_mask.to_string());
         self
     }
 
-    pub fn build(self) -> ZenohResult<ZenohConfig> {
-        let mut config = ZenohConfig::uninitialized();
+    pub fn build(self) -> ZenohResult<Config> {
+        let mut config = Config::uninitialized();
         config.with_zowned_mut(|z| unsafe { z_config_default(z).into_zresult() })?;
         self.options
             .into_iter()

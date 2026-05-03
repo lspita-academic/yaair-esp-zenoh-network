@@ -7,7 +7,7 @@ use embassy_sync::signal::Signal;
 use zenoh_pico_macros::zwrap;
 
 use crate::{
-    config::ZenohConfig,
+    config::Config,
     keyexpr::KeyExpr,
     result::{IntoZenohResult, ZenohResult},
     sample::SampleClosure,
@@ -42,7 +42,7 @@ impl ZOptionsInit for z_close_options_t {
 pub struct Session;
 
 impl Session {
-    pub fn open(config: ZenohConfig, open_options: Option<z_open_options_t>) -> ZenohResult<Self> {
+    pub fn open(config: Config, open_options: Option<z_open_options_t>) -> ZenohResult<Self> {
         let open_options = options_ptr(open_options.as_ref());
         let mut session = Self::uninitialized();
         session

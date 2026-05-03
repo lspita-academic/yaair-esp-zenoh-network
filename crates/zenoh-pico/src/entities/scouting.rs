@@ -5,7 +5,7 @@ use num_enum::UnsafeFromPrimitive;
 use zenoh_pico_macros::zwrap;
 
 use crate::{
-    config::ZenohConfig,
+    config::Config,
     entities::whatami::WhatAmI,
     result::{IntoZenohResult, ZenohResult},
     sys::{
@@ -52,7 +52,7 @@ pub struct Scout {
 
 impl Scout {
     pub fn start(
-        config: ZenohConfig,
+        config: Config,
         scout_options: Option<z_scout_options_t>,
     ) -> ZenohResult<Self> {
         let scout_options = options_ptr(scout_options.as_ref());

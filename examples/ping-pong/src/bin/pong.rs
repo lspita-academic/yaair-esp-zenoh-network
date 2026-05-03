@@ -6,7 +6,7 @@ use esp_idf_platform::wifi::{ConnectedWifi, Wifi, config::WifiConfig};
 use esp_idf_svc::log::EspLogger;
 use static_cell::StaticCell;
 use zenoh_pico::{
-    config::{ZenohConfigBuilder, ZenohConfigMode},
+    config::{ConfigBuilder, ConfigMode},
     session::Session,
     zbytes::TryIntoZBytes,
 };
@@ -70,8 +70,8 @@ async fn main(spawner: Spawner) {
     let ip_info = netif.get_ip_info().expect("Unable to get IP info");
     log::info!("WiFi interface: {}", if_name);
     log::info!("IP address: {}", ip_info.ip);
-    let zenoh_config = ZenohConfigBuilder::default()
-        .mode(ZenohConfigMode::Peer)
+    let zenoh_config = ConfigBuilder::default()
+        .mode(ConfigMode::Peer)
         .scouting_timeout(Duration::from_secs(30))
         .multicast_locator(&format!("udp/224.0.0.224:7446#iface={if_name}"))
         .listen(&format!("udp/224.0.0.224:7447#iface={if_name}"))
