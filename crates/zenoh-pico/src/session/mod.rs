@@ -18,7 +18,7 @@ use crate::{
     sys::{
         z_close, z_close_options_t, z_declare_publisher, z_declare_subscriber, z_open,
         z_open_options_default, z_open_options_t, z_publisher_options_t, z_session_is_closed,
-        z_subscriber_options_t, zp_start_lease_task, zp_start_read_task,
+        z_subscriber_options_t,
     },
     zoptions::{ZOptionsInit, options_ptr},
     zvalue::{ZClosure, ZOwn, ZValue},
@@ -48,13 +48,6 @@ impl Session {
         session
             .with_zowned_mut(|z| unsafe {
                 z_open(z, &mut config.zmove(), open_options).into_zresult()
-            })
-            // not done automatically, even if it should be because of the default options
-            .and_then(|_| unsafe {
-                zp_start_read_task(session.zloan_mut(), std::ptr::null()).into_zresult()
-            })
-            .and_then(|_| unsafe {
-                zp_start_lease_task(session.zloan_mut(), std::ptr::null()).into_zresult()
             })
             .map(|_| session)
     }

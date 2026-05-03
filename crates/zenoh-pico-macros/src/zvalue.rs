@@ -428,7 +428,7 @@ impl ZWrapAttrTokens for ZCloneAttr {
         let zclone_impl = &input.impl_signature(Some(&zclone_trait.to_token_stream()));
         let zvalue_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZValue);
 
-         let clone_impl = if config.zown.is_some() {
+        let clone_impl = if config.zown.is_some() {
             let clone_zfn = params.path_or_sys_default(
                 self.clone_zfn.as_ref(),
                 |b| format_ident!("_z_{b}_copy"),

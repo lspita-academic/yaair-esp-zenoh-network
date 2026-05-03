@@ -6,7 +6,7 @@ use strum::{Display, EnumString};
 use zenoh_pico_macros::zwrap;
 
 use crate::{
-    entities::{whatami::WhatAmIMask},
+    entities::whatami::WhatAmIMask,
     result::{IntoZenohResult, ZenohResult},
     sys::{
         Z_CONFIG_CONNECT_KEY, Z_CONFIG_LISTEN_KEY, Z_CONFIG_MODE_KEY,
