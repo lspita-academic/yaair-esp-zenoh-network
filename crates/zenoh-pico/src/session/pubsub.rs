@@ -40,9 +40,9 @@ impl Publisher {
     pub fn put<V: IntoZBytes>(
         &self,
         value: V,
-        put_options: Option<z_publisher_put_options_t>,
+        options: Option<z_publisher_put_options_t>,
     ) -> ZenohResult<()> {
-        let put_options = options_ptr(put_options.as_ref());
+        let put_options = options_ptr(options.as_ref());
         let payload = value.into_zbytes();
         unsafe { z_publisher_put(self.zloan(), &mut payload.zmove(), put_options).into_zresult() }
     }

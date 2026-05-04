@@ -51,13 +51,13 @@ pub struct Scout {
 }
 
 impl Scout {
-    pub fn start(config: Config, scout_options: Option<z_scout_options_t>) -> ZenohResult<Self> {
-        let scout_options = options_ptr(scout_options.as_ref());
+    pub fn start(config: Config, options: Option<z_scout_options_t>) -> ZenohResult<Self> {
+        let options = options_ptr(options.as_ref());
         let signal = Arc::new(Signal::new());
         let closure = HelloClosure::from_signal(signal.clone())?;
 
         unsafe {
-            z_scout(&mut config.zmove(), &mut closure.zmove(), scout_options).into_zresult()?;
+            z_scout(&mut config.zmove(), &mut closure.zmove(), options).into_zresult()?;
         }
         Ok(Self { signal })
     }

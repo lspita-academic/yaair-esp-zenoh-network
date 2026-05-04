@@ -32,7 +32,7 @@ pub enum InternalTypeFamily {
 pub struct TypeBase {
     name: String,
     #[darling(default)]
-    family: InternalTypeFamily,
+    family: Option<InternalTypeFamily>,
 }
 
 impl Display for TypeBase {
@@ -42,9 +42,34 @@ impl Display for TypeBase {
 }
 
 impl TypeBase {
+    #[allow(dead_code)]
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn family(&self) -> InternalTypeFamily {
+        self.family.unwrap_or_default()
+    }
+
+    fn merge(&self, other: Option<&Self>) -> Self {
+        other
+            .map(|b| TypeBase {
+                name: b.name.clone(),
+                family: b.family.or(self.family),
+            })
+            .unwrap_or(self.clone())
+    }
+
+    fn rename<F: FnOnce(&str) -> String>(&self, f: F) -> Self {
+        Self {
+            name: f(&self.name),
+            ..self.clone()
+        }
+    }
+
     fn ident(&self) -> Ident {
         let name = &self.name;
-        match self.family {
+        match self.family() {
             InternalTypeFamily::Normal => format_ident!("_z_{name}_t"),
             InternalTypeFamily::Rc => format_ident!("_z_{name}_rc_t"),
             InternalTypeFamily::Primitive => format_ident!("z_{name}_t"),
@@ -151,10 +176,6 @@ struct ZWrapParams<'a> {
 }
 
 impl ZWrapParams<'_> {
-    pub fn merged_base<'a>(&'a self, base: Option<&'a TypeBase>) -> Option<&'a TypeBase> {
-        base.or(self.base)
-    }
-
     pub fn path_or_sys_default<P, IdentCreator>(
         &self,
         path: Option<&P>,
@@ -167,10 +188,13 @@ impl ZWrapParams<'_> {
     {
         path.map(ToTokens::into_token_stream)
             .or_else(|| {
-                self.merged_base(base).map(sys_ident_creator).map(|i| {
-                    let zenoh_pico_sys = &self.zenoh_pico_sys;
-                    quote! {#zenoh_pico_sys::#i}
-                })
+                self.base
+                    .map(|b| b.merge(base))
+                    .map(|b| sys_ident_creator(&b))
+                    .map(|i| {
+                        let zenoh_pico_sys = &self.zenoh_pico_sys;
+                        quote! {#zenoh_pico_sys::#i}
+                    })
             })
             .map(syn::parse2)
             .unwrap_or(Err(Error::new(
@@ -312,13 +336,8 @@ impl ZWrapAttrTokens for ZOwnAttr {
     fn to_tokens(&self, input: &ZWrapInput, params: &ZWrapParams) -> syn::Result<TokenStream> {
         let &ZWrapParams { zenoh_pico, .. } = &params;
 
-        let family = self
-            .base
-            .as_ref()
-            .map(|b| b.family)
-            .unwrap_or(InternalTypeFamily::default());
-        match family {
-            InternalTypeFamily::Primitive => {
+        match self.base.as_ref().map(|b| b.family()) {
+            Some(InternalTypeFamily::Primitive) => {
                 return Err(Error::new(
                     Span::call_site(),
                     "Cannot implement ZOwn trait for primitive zenoh value",
@@ -334,8 +353,9 @@ impl ZWrapAttrTokens for ZOwnAttr {
         )?;
         let owned_attr = self.owned_attr.clone().unwrap_or(
             match params
-                .merged_base(self.base.as_ref())
-                .map(|b| b.family)
+                .base
+                .map(|b| b.merge(self.base.as_ref()))
+                .map(|b| b.family())
                 .unwrap_or_default()
             {
                 InternalTypeFamily::Normal => parse_quote!(_val),
@@ -535,11 +555,7 @@ impl ZWrapAttrTokens for ZClosureAttr {
         let callback_ty = params.path_or_sys_default(
             self.callback_ty.as_ref(),
             |b| {
-                let name = b.name.strip_prefix("closure_").unwrap_or(&b.name);
-                let base = TypeBase {
-                    name: name.to_owned(),
-                    ..b.clone()
-                };
+                let base = b.rename(|s| s.strip_prefix("closure_").unwrap_or(s).to_owned());
                 base.ident()
             },
             self.base.as_ref(),

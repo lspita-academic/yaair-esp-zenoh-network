@@ -67,6 +67,9 @@ pub enum ReplyKeyexpr {
 #[zwrap(base(name = "query", family = "rc"), zvalue, zown, zclone)]
 pub struct Query;
 
+#[zwrap(base(name = "closure_query"), zvalue, zown, zclosure(callback_ty = <Query as ZValue>::Value))]
+pub struct QueryClosure;
+
 impl Query {
     pub fn keyexpr(&self) -> &KeyExpr {
         KeyExpr::from_ptr(unsafe { z_query_keyexpr(self.zloan()) })
@@ -100,6 +103,9 @@ impl Query {
 
 #[zwrap(base(name = "reply"), zvalue, zown, zclone)]
 pub struct Reply;
+
+#[zwrap(base(name = "closure_reply"), zvalue, zown, zclosure(callback_ty = <Reply as ZValue>::Value))]
+pub struct ReplyClosure;
 
 #[zwrap(base(name = "reply_err"), zvalue(value_ty = _z_value_t), zown, zclone)]
 pub struct ReplyError;
