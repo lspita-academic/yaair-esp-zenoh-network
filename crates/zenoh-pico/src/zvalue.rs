@@ -41,6 +41,13 @@ pub trait ZClone: ZValue {
     fn zclone(ptr: *const Self::Value) -> Self;
 }
 
+pub trait ZView: ZValue {
+    type ViewValue: CType;
+
+    fn from_zview<'a>(value: Self::ViewValue) -> &'a Self;
+    fn from_zview_mut<'a>(value: Self::ViewValue) -> &'a mut Self;
+}
+
 pub trait ZClosure: ZOwn {
     type CallbackValue: CType;
 

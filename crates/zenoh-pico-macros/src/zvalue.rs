@@ -93,6 +93,15 @@ struct ZCloneAttr {
 
 #[derive(FromMeta, Default)]
 #[darling(default, from_word = default_meta_from_word)]
+struct ZViewAttr {
+    base: Option<TypeBase>,
+    view_ty: Option<TypePath>,
+    loan_zfn: Option<ExprPath>,
+    loan_mut_zfn: Option<ExprPath>,
+}
+
+#[derive(FromMeta, Default)]
+#[darling(default, from_word = default_meta_from_word)]
 pub struct ZClosureAttr {
     base: Option<TypeBase>,
     callback_ty: Option<TypePath>,
@@ -106,6 +115,7 @@ pub struct ZWrapConfig {
     zvalue: Option<ZValueAttr>,
     zown: Option<ZOwnAttr>,
     zclone: Option<ZCloneAttr>,
+    zview: Option<ZViewAttr>,
     zclosure: Option<ZClosureAttr>,
 }
 
@@ -473,6 +483,47 @@ impl ZWrapAttrTokens for ZCloneAttr {
     }
 }
 
+impl ZWrapAttrTokens for ZViewAttr {
+    fn to_tokens(&self, input: &ZWrapInput, params: &ZWrapParams) -> syn::Result<TokenStream> {
+        let &ZWrapParams { zenoh_pico, .. } = &params;
+
+        let view_ty = params.path_or_sys_default(
+            self.loan_zfn.as_ref(),
+            |b| format_ident!("z_view_{b}_t"),
+            self.base.as_ref(),
+        )?;
+        let loan_zfn = params.path_or_sys_default(
+            self.loan_zfn.as_ref(),
+            |b| format_ident!("z_view_{b}_loan"),
+            self.base.as_ref(),
+        )?;
+        let loan_mut_zfn = params.path_or_sys_default(
+            self.loan_zfn.as_ref(),
+            |b| format_ident!("z_view_{b}_loan_mut"),
+            self.base.as_ref(),
+        )?;
+
+        let zview_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZView);
+        let zview_impl = &input.impl_signature(Some(&zview_trait.to_token_stream()));
+        let zvalue_trait: Path = parse_quote!(#zenoh_pico::zvalue::ZValue);
+
+        let tokens = quote! {
+            #zview_impl {
+                type ViewValue = #view_ty;
+
+                fn from_zview<'a>(value: Self::ViewValue) -> &'a Self {
+                    <Self as #zvalue_trait>::from_ptr(unsafe { #loan_zfn(&value) })
+                }
+                fn from_zview_mut<'a>(mut value: Self::ViewValue) -> &'a mut Self {
+                    <Self as #zvalue_trait>::from_ptr_mut(unsafe { #loan_mut_zfn(&mut value) })
+                }
+            }
+        };
+
+        Ok(tokens)
+    }
+}
+
 impl ZWrapAttrTokens for ZClosureAttr {
     fn to_tokens(&self, input: &ZWrapInput, params: &ZWrapParams) -> syn::Result<TokenStream> {
         let &ZWrapParams { zenoh_pico, .. } = &params;
@@ -565,6 +616,7 @@ pub fn zwrap(input: ZWrapInput, config: ZWrapConfig) -> syn::Result<TokenStream>
         config.zvalue.as_ref().map(|a| a as _),
         config.zown.as_ref().map(|a| a as _),
         config.zclone.as_ref().map(|a| a as _),
+        config.zview.as_ref().map(|a| a as _),
         config.zclosure.as_ref().map(|a| a as _),
     ];
     for a in attributes {

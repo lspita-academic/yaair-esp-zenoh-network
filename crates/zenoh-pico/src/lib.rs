@@ -1,7 +1,8 @@
 pub mod config;
-pub mod message;
 pub mod entities;
 pub mod keyexpr;
+pub mod message;
+pub mod query;
 pub mod result;
 pub mod sample;
 pub mod session;

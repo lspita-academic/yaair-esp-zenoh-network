@@ -17,10 +17,9 @@ pub struct KeyExpr;
 impl KeyExpr {
     pub fn declare(self, session: &Session) -> ZenohResult<Self> {
         let mut keyexpr = Self::uninitialized();
-        keyexpr
-            .with_zowned_mut(|z| unsafe {
-                z_declare_keyexpr(session.zloan(), z, self.zloan()).into_zresult()
-            })?;
+        keyexpr.with_zowned_mut(|z| unsafe {
+            z_declare_keyexpr(session.zloan(), z, self.zloan()).into_zresult()
+        })?;
         Ok(keyexpr)
     }
 }
@@ -30,10 +29,9 @@ impl FromStr for KeyExpr {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut keyexpr = Self::uninitialized();
-        keyexpr
-            .with_zowned_mut(|z| unsafe {
-                z_keyexpr_from_substr_autocanonize(z, s.as_ptr(), &mut s.len()).into_zresult()
-            })?;
+        keyexpr.with_zowned_mut(|z| unsafe {
+            z_keyexpr_from_substr_autocanonize(z, s.as_ptr(), &mut s.len()).into_zresult()
+        })?;
         Ok(keyexpr)
     }
 }

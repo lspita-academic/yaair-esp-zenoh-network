@@ -1,19 +1,29 @@
 pub mod info;
-pub mod publisher;
-pub mod subscriber;
+pub mod pubsub;
+pub mod queryreply;
 
 use std::sync::Arc;
 
 use embassy_sync::signal::Signal;
 use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
-    z_close, z_close_options_t, z_declare_publisher, z_declare_subscriber, z_info_peers_zid, z_open, z_open_options_default, z_open_options_t, z_publisher_options_t, z_session_is_closed, z_subscriber_options_t
+    z_close, z_close_options_t, z_declare_publisher, z_declare_subscriber, z_info_peers_zid,
+    z_open, z_open_options_default, z_open_options_t, z_publisher_options_t, z_session_is_closed,
+    z_subscriber_options_t,
 };
 
 use crate::{
-    config::Config, keyexpr::KeyExpr, result::{IntoZenohResult, ZenohResult}, sample::SampleClosure, session::{
-        info::PeersInfo, publisher::Publisher, subscriber::{InternalSubscriber, Subscriber}
-    }, zid::ZIdClosure, zoptions::{ZOptionsInit, options_ptr}, zvalue::{ZClosure, ZOwn, ZValue}
+    config::Config,
+    keyexpr::KeyExpr,
+    result::{IntoZenohResult, ZenohResult},
+    sample::SampleClosure,
+    session::{
+        info::PeersInfo,
+        pubsub::{InternalSubscriber, Publisher, Subscriber},
+    },
+    zid::ZIdClosure,
+    zoptions::{ZOptionsInit, options_ptr},
+    zvalue::{ZClosure, ZOwn, ZValue},
 };
 
 impl ZOptionsInit for z_open_options_t {
@@ -37,10 +47,9 @@ impl Session {
     pub fn open(config: Config, open_options: Option<z_open_options_t>) -> ZenohResult<Self> {
         let open_options = options_ptr(open_options.as_ref());
         let mut session = Self::uninitialized();
-        session
-            .with_zowned_mut(|z| unsafe {
-                z_open(z, &mut config.zmove(), open_options).into_zresult()
-            })?;
+        session.with_zowned_mut(|z| unsafe {
+            z_open(z, &mut config.zmove(), open_options).into_zresult()
+        })?;
         Ok(session)
     }
 
@@ -95,9 +104,7 @@ impl Session {
         let signal = Arc::new(Signal::new());
         let zid_closure = ZIdClosure::from_signal(signal.clone())?;
 
-        unsafe {
-            z_info_peers_zid(self.zloan(), &mut zid_closure.zmove()).into_zresult()
-        }?;
+        unsafe { z_info_peers_zid(self.zloan(), &mut zid_closure.zmove()).into_zresult() }?;
         Ok(PeersInfo { signal })
     }
 }

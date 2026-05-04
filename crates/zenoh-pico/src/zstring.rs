@@ -14,7 +14,7 @@ use crate::{
     zvalue::{ZOwn, ZValue},
 };
 
-#[zwrap(base(name = "string"), zvalue, zown, zclone)]
+#[zwrap(base(name = "string"), zvalue, zown, zclone, zview)]
 pub struct ZString;
 
 pub trait FromZStr
@@ -41,10 +41,9 @@ impl FromStr for ZString {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut zstring = Self::uninitialized();
-        zstring
-            .with_zowned_mut(|z| unsafe {
-                z_string_copy_from_substr(z, s.as_ptr(), s.len()).into_zresult()
-            })?;
+        zstring.with_zowned_mut(|z| unsafe {
+            z_string_copy_from_substr(z, s.as_ptr(), s.len()).into_zresult()
+        })?;
         Ok(zstring)
     }
 }
