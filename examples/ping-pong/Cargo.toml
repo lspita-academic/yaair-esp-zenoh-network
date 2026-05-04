@@ -4,18 +4,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
-[[bin]]
-harness = false  # do not use the built-in cargo test harness -> resolve rust-analyzer errors
+[[example]]
 name = "ping"
 
-[[bin]]
-harness = false  # do not use the built-in cargo test harness -> resolve rust-analyzer errors
+[[example]]
 name = "pong"
 
 [dependencies]
 critical-section.workspace = true
 embassy-executor.workspace = true
-embassy-sync.workspace = true
 embassy-time.workspace = true
 esp-idf-platform.workspace = true
 esp-idf-svc.workspace = true
@@ -26,7 +23,3 @@ zenoh-pico.workspace = true
 
 [build-dependencies]
 embuild.workspace = true
-
-[features]
-default = []
-experimental = ["esp-idf-svc/experimental"]
