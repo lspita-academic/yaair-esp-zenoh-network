@@ -1,4 +1,4 @@
-use std::{ffi::c_void, sync::Arc};
+use std::sync::Arc;
 
 use embassy_sync::{blocking_mutex::raw::RawMutex, signal::Signal};
 
@@ -52,7 +52,7 @@ pub trait ZClosure: ZOwn {
     type CallbackValue: CType;
 
     fn from_callback<T>(
-        callback: unsafe extern "C" fn(*const Self::CallbackValue, *mut c_void),
+        callback: unsafe extern "C" fn(*const Self::CallbackValue, *mut T),
         context: Option<Arc<T>>,
     ) -> ZenohResult<Self>;
 
@@ -61,9 +61,9 @@ pub trait ZClosure: ZOwn {
     ) -> ZenohResult<Self> {
         unsafe extern "C" fn zclosure_signal_callback<M: RawMutex, T: ZClone>(
             value: *const T::Value,
-            context: *mut c_void,
+            context: *mut Signal<M, T>,
         ) {
-            let signal = unsafe { &*(context as *mut Signal<M, T>) };
+            let signal = unsafe { &*context };
             let value = T::zclone(value);
             signal.signal(value);
         }

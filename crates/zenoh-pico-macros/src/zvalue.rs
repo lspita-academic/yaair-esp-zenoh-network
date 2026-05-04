@@ -578,13 +578,14 @@ impl ZWrapAttrTokens for ZClosureAttr {
         let zresult_trait: Path = parse_quote!(#zenoh_pico::result::IntoZenohResult);
         let arc_ty: Path = parse_quote!(::std::sync::Arc);
         let cvoid_ty: Path = parse_quote!(::core::ffi::c_void);
+        let trasmute_fn: Path = parse_quote!(::core::mem::transmute);
 
         Ok(quote! {
             #zclosure_impl {
                 type CallbackValue = #callback_ty;
 
                 fn from_callback<T>(
-                    callback: unsafe extern "C" fn(*const Self::CallbackValue, *mut #cvoid_ty),
+                    callback: unsafe extern "C" fn(*const Self::CallbackValue, *mut T),
                     context: ::core::option::Option<#arc_ty<T>>,
                 ) -> #zenoh_result_ty<Self> {
                     use #zresult_trait as _;
@@ -592,14 +593,16 @@ impl ZWrapAttrTokens for ZClosureAttr {
                     // Rc reference for the closure to ensure it lives the whole time.
                     // Atomic because zenoh could use multiple threads.
                     let context_ptr = context
-                            .map(|arc| #arc_ty::into_raw(arc) as *mut #cvoid_ty)
+                            .map(|arc| #arc_ty::into_raw(arc))
                             .unwrap_or(std::ptr::null_mut());
 
-                    unsafe extern "C" fn drop_context<T>(ptr: *mut #cvoid_ty) {
+                    unsafe extern "C" fn drop_context<T>(ptr: *const T) {
                         if !ptr.is_null() {
-                            drop(unsafe { #arc_ty::<T>::from_raw(ptr as *const T) });
+                            drop(unsafe { #arc_ty::from_raw(ptr) });
                         }
                     }
+                    // get sized pointer to be able to call trasmute
+                    let drop_fn = drop_context::<T> as unsafe extern "C" fn(*const T);
 
                     let mut value = <Self as #zvalue_trait>::uninitialized();
                     <Self as #zown_trait>::with_zowned_mut(
@@ -607,9 +610,9 @@ impl ZWrapAttrTokens for ZClosureAttr {
                         |z| unsafe {
                             #init_zfn(
                                 z,
-                                ::core::mem::transmute(Some(callback)),
-                                Some(drop_context::<T>),
-                                context_ptr,
+                                #trasmute_fn(Some(callback)),
+                                #trasmute_fn(Some(drop_fn)),
+                                context_ptr as *mut #cvoid_ty,
                             ).into_zresult()
                         },
                     )?;
