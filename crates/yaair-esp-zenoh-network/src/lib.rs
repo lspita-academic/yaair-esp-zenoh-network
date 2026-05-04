@@ -4,22 +4,27 @@ use yaair::yaair::{
     messages::{inbound::InboundMessage, serializer::Serializer},
     network::Network,
 };
-use zenoh_pico::{query::Query, session::{Session, queryreply::{Querier, Queryable}}, zbytes::ZBytes, zid::ZId, zvalue::ZValue};
+use zenoh_pico::{
+    query::Query,
+    session::{
+        Session,
+        queryreply::{Querier, Queryable},
+    },
+    zbytes::ZBytes,
+    zid::ZId,
+    zvalue::ZValue,
+};
 
-pub struct ZenohPicoNetwork {
-    payload: Arc<ZBytes>,
-    queryable: Queryable,
-    querier: Querier,
-}
+pub struct ZenohPicoNetwork {}
 
 impl ZenohPicoNetwork {
-    unsafe extern "C" fn handle_query(query: *const <Query as ZValue>::Value, context: *mut c_void) {
-
+    unsafe extern "C" fn handle_query(
+        query: *const <Query as ZValue>::Value,
+        context: *mut c_void,
+    ) {
     }
 
-    pub fn new(session: &Session) {
-
-    }
+    pub fn new(session: &Session) {}
 }
 
 impl<S: Serializer> Network<ZId, S> for ZenohPicoNetwork {

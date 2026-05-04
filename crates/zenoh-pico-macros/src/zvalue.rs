@@ -592,9 +592,10 @@ impl ZWrapAttrTokens for ZClosureAttr {
 
                     // Rc reference for the closure to ensure it lives the whole time.
                     // Atomic because zenoh could use multiple threads.
+                    // Caller must use mutexes if a mutable reference is needed.
                     let context_ptr = context
-                            .map(|arc| #arc_ty::into_raw(arc))
-                            .unwrap_or(std::ptr::null_mut());
+                        .map(|arc| #arc_ty::into_raw(arc) as *mut #cvoid_ty)
+                        .unwrap_or(std::ptr::null_mut());
 
                     unsafe extern "C" fn drop_context<T>(ptr: *const T) {
                         if !ptr.is_null() {
@@ -612,7 +613,7 @@ impl ZWrapAttrTokens for ZClosureAttr {
                                 z,
                                 #trasmute_fn(Some(callback)),
                                 #trasmute_fn(Some(drop_fn)),
-                                context_ptr as *mut #cvoid_ty,
+                                context_ptr,
                             ).into_zresult()
                         },
                     )?;

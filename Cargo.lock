@@ -1380,7 +1380,6 @@ version = "0.1.0"
 dependencies = [
  "critical-section",
  "embassy-executor",
- "embassy-sync 0.8.0",
  "embassy-time",
  "embuild",
  "esp-idf-platform",
