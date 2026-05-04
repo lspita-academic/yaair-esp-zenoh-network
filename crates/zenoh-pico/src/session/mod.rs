@@ -1,4 +1,5 @@
 pub mod info;
+pub mod matching;
 pub mod pubsub;
 pub mod queryreply;
 
@@ -7,9 +8,10 @@ use std::sync::Arc;
 use embassy_sync::signal::Signal;
 use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
-    z_close, z_close_options_t, z_declare_publisher, z_declare_queryable, z_declare_subscriber,
-    z_info_peers_zid, z_open, z_open_options_default, z_open_options_t, z_publisher_options_t,
-    z_queryable_options_t, z_session_is_closed, z_subscriber_options_t,
+    z_close, z_close_options_t, z_declare_publisher, z_declare_querier, z_declare_queryable,
+    z_declare_subscriber, z_info_peers_zid, z_open, z_open_options_default, z_open_options_t,
+    z_publisher_options_t, z_querier_options_t, z_queryable_options_t, z_session_is_closed,
+    z_subscriber_options_t,
 };
 
 use crate::{
@@ -21,10 +23,10 @@ use crate::{
     session::{
         info::PeersInfo,
         pubsub::{InternalSubscriber, Publisher, Subscriber},
-        queryreply::{InternalQueryable, Queryable},
+        queryreply::{InternalQueryable, Querier, Queryable},
     },
     zid::ZIdClosure,
-    zoptions::{ZOptionsInit, options_ptr},
+    zoptions::{ZOptionsInit, options_ptr, options_ptr_mut},
     zvalue::{ZClosure, ZOwn, ZValue},
 };
 
@@ -123,6 +125,19 @@ impl Session {
             .into_zresult()
         })?;
         Ok(Queryable { queryable, signal })
+    }
+
+    pub fn declare_querier(
+        &self,
+        key: &KeyExpr,
+        mut options: Option<z_querier_options_t>,
+    ) -> ZenohResult<Querier> {
+        let options = options_ptr_mut(options.as_mut());
+        let mut querier = Querier::uninitialized();
+        querier.with_zowned_mut(|z| unsafe {
+            z_declare_querier(self.zloan(), z, key.zloan(), options).into_zresult()
+        })?;
+        Ok(querier)
     }
 
     pub fn peers(&self) -> ZenohResult<PeersInfo> {

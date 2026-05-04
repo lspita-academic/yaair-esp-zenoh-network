@@ -19,3 +19,7 @@ impl<T: ZOptionsInit + CType> ZOptionsDefault for T {
 pub fn options_ptr<T: ZOptionsDefault>(opt: Option<&T>) -> *const T {
     opt.map(|o| o as *const _).unwrap_or(core::ptr::null())
 }
+
+pub fn options_ptr_mut<T: ZOptionsDefault>(opt: Option<&mut T>) -> *mut T {
+    opt.map(|o| o as *mut _).unwrap_or(core::ptr::null_mut())
+}

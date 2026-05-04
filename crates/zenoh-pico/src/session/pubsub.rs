@@ -3,15 +3,17 @@ use std::sync::Arc;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
-    z_publisher_keyexpr, z_publisher_options_default, z_publisher_options_t, z_publisher_put,
-    z_publisher_put_options_default, z_publisher_put_options_t, z_subscriber_keyexpr,
-    z_subscriber_options_t, z_undeclare_publisher, z_undeclare_subscriber,
+    z_publisher_get_matching_status, z_publisher_keyexpr, z_publisher_options_default,
+    z_publisher_options_t, z_publisher_put, z_publisher_put_options_default,
+    z_publisher_put_options_t, z_subscriber_keyexpr, z_subscriber_options_t, z_undeclare_publisher,
+    z_undeclare_subscriber,
 };
 
 use crate::{
     keyexpr::KeyExpr,
     result::{IntoZenohResult, ZenohResult},
     sample::Sample,
+    session::matching::MatchingStatus,
     zbytes::IntoZBytes,
     zoptions::{ZOptionsInit, options_ptr},
     zvalue::{ZOwn, ZValue},
@@ -45,6 +47,12 @@ impl Publisher {
         let put_options = options_ptr(options.as_ref());
         let payload = value.into_zbytes();
         unsafe { z_publisher_put(self.zloan(), &mut payload.zmove(), put_options).into_zresult() }
+    }
+
+    pub fn matching_status(&self) -> ZenohResult<MatchingStatus> {
+        let mut matching_status = MatchingStatus::uninitialized();
+        unsafe { z_publisher_get_matching_status(self.zloan(), matching_status.zloan_mut()).into_zresult() }?;
+        Ok(matching_status)
     }
 
     pub fn keyexpr(&self) -> &KeyExpr {
