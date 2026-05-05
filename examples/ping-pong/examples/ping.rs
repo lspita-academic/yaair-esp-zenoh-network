@@ -34,18 +34,22 @@ async fn ping(zenoh_session: &'static Session) {
     let mut ping = 0usize;
     loop {
         Timer::after_secs(2).await;
+
         log::info!("Publishing ping: {ping}");
-        let payload = postcard::to_allocvec(&ping)
-            .expect("Failed to serialize ping")
+        let bytes = postcard::to_allocvec(&ping).expect("Failed to serialize ping");
+        log::info!("Serialized ping: {bytes:?}");
+        let payload = bytes
             .try_into_zbytes()
             .expect("Failed to create ping payload");
         publisher
             .put(payload, None)
             .expect("Failed to publish ping");
         log::info!("Published ping");
+
         log::info!("Waiting pong");
         let sample = subscriber.recv_async().await;
-        let bytes: Vec<_> = sample.payload().into_iter().collect();
+        let bytes = sample.payload().owned_bytes();
+        log::info!("Serialized pong: {bytes:?}");
         let pong: usize = postcard::from_bytes(&bytes).expect("Failed to deserialize pong");
         log::info!("Received pong: {pong}");
         ping = pong + 1;

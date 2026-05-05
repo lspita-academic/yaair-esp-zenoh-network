@@ -4,7 +4,7 @@ use zenoh_pico_sys::{z_timestamp_id, z_timestamp_ntp64_time};
 
 use crate::{zid::ZId, zvalue::ZValue};
 
-#[zwrap(base(name = "timestamp"), zvalue)]
+#[zwrap(base(name = "timestamp"), zvalue, zclone)]
 pub struct Timestamp;
 
 impl Timestamp {

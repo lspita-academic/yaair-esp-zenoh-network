@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::{Deref, DerefMut}, sync::Arc};
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 
@@ -30,6 +30,16 @@ pub struct AsyncHandler<Handler, T> {
     signal: Arc<Signal<CriticalSectionRawMutex, T>>,
 }
 
+impl<Handler, T> AsyncHandler<Handler, T> {
+    pub fn handler(&self) -> &Handler {
+        &self.handler
+    }
+
+    pub fn handler_mut(&mut self) -> &mut Handler {
+        &mut self.handler
+    }
+}
+
 impl<Handler, T> AsyncHandler<Handler, T>
 where
     Handler: KeyHandler,
@@ -39,15 +49,21 @@ where
         Self { handler, signal }
     }
 
-    pub fn handler(&self) -> &Handler {
-        &self.handler
-    }
-
-    pub fn handler_mut(&mut self) -> &mut Handler {
-        &mut self.handler
-    }
-
     pub async fn recv_async(&self) -> T {
         self.signal.wait().await
+    }
+}
+
+impl<Handler, T> Deref for AsyncHandler<Handler, T> {
+    type Target = Handler;
+
+    fn deref(&self) -> &Self::Target {
+        self.handler()
+    }
+}
+
+impl<Handler, T> DerefMut for AsyncHandler<Handler, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.handler_mut()
     }
 }

@@ -13,6 +13,16 @@ use crate::{
 #[zwrap(base(name = "bytes"), zvalue, zown)]
 pub struct ZBytes;
 
+impl ZBytes {
+    pub fn parse<T: FromZBytes>(&self) -> Result<T, T::Err> {
+        T::from_zbytes(&self)
+    }
+
+    pub fn owned_bytes(&self) -> Vec<u8> {
+        self.into_iter().collect()
+    }
+}
+
 impl Default for ZBytes {
     fn default() -> Self {
         let mut zbytes = Self::uninitialized();
@@ -43,12 +53,6 @@ where
 impl IntoZBytes for ZBytes {
     fn into_zbytes(self) -> ZBytes {
         self
-    }
-}
-
-impl ZBytes {
-    pub fn parse<T: FromZBytes>(&self) -> Result<T, T::Err> {
-        T::from_zbytes(&self)
     }
 }
 
