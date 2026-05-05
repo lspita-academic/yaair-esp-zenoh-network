@@ -1,12 +1,26 @@
-use std::{collections::HashMap, sync::Mutex, time::SystemTime};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use yaair::yaair::messages::serializer::Serializer;
-use zenoh_pico::zid::ZId;
-
-use crate::atomic::{
-    AtomicLockResultExtensions, AtomicResult, AtomicResultExtensions, PoisonedLockError,
+use zenoh_pico::{
+    keyexpr::KeyExpr,
+    result::{ZenohError, ZenohResult},
+    sample::{Sample, SampleClosure},
+    session::{
+        Session,
+        pubsub::{Publisher, Subscriber},
+    },
+    zbytes::TryIntoZBytes,
+    zid::ZId,
+    zvalue::{ZClone, ZClosure, ZValue},
 };
+
+use crate::{NetworkContext, atomic::PoisonedLockError};
 
 #[derive(Serialize, Deserialize)]
 pub struct MessagePacket {
@@ -15,6 +29,10 @@ pub struct MessagePacket {
 }
 
 impl MessagePacket {
+    pub fn new(payload: Vec<u8>, sender: ZId) -> Self {
+        Self { payload, sender }
+    }
+
     pub fn payload(&self) -> &[u8] {
         &self.payload
     }
@@ -74,27 +92,86 @@ impl AtomicMessagesStore {
     }
 }
 
-pub struct AtomicMessageSerializer<S> {
-    serializer: Mutex<S>,
+pub struct MessageSubscriber {
+    _subscriber: Subscriber, // store it to keep it alive
 }
 
-impl<S: Serializer> AtomicMessageSerializer<S> {
-    pub fn new(serializer: S) -> Self {
-        Self {
-            serializer: Mutex::new(serializer),
+impl MessageSubscriber {
+    pub fn new<S: Serializer>(
+        session: &Session,
+        base_keyexpr: &KeyExpr,
+        context: Arc<NetworkContext<S>>,
+    ) -> ZenohResult<Self> {
+        let subscriber = session.declare_subscriber(
+            &base_keyexpr.join_autocanonize(&KeyExpr::new("*")?)?,
+            SampleClosure::from_callback(Self::on_message::<S>, Some(context.clone()))?,
+            None,
+        )?;
+        Ok(Self { _subscriber: subscriber })
+    }
+
+    unsafe extern "C" fn on_message<S: Serializer>(
+        sample: *const <Sample as ZValue>::Value,
+        context: *const NetworkContext<S>,
+    ) {
+        let sample = Sample::zclone(sample);
+        let context = unsafe { &*context };
+
+        let payload_bytes = sample.payload().owned_bytes();
+        let packet: MessagePacket = match context.serializer.deserialize(&payload_bytes) {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!("Failed to deserialize message packet: {e}");
+                return;
+            }
+        };
+
+        let zid = packet.sender();
+        let message = Message::from(packet);
+        if let Err(e) = context.messages.store(zid, message) {
+            log::warn!("Failed to store message: {e}");
+            return;
         }
     }
+}
 
-    pub fn deserialize_packet<P: AsRef<[u8]>>(
-        &self,
-        payload: P,
-    ) -> AtomicResult<MessagePacket, S::Error> {
-        let serializer = self.serializer.lock().atomic_lock()?;
-        serializer.deserialize(payload.as_ref()).atomic()
+pub struct MessagePublisher {
+    zid: ZId,
+    publisher: Publisher,
+}
+
+#[derive(Debug, Error)]
+pub enum PutError<SerializationError> {
+    #[error("serialization error while trying to publish: {0}")]
+    Serialization(SerializationError),
+    #[error("zenoh error while trying to publish: {0}")]
+    Zenoh(ZenohError),
+}
+
+impl MessagePublisher {
+    pub fn new(session: &Session, base_keyexpr: &KeyExpr) -> ZenohResult<Self> {
+        let zid = session.zid();
+        let publisher = session.declare_publisher(
+            &base_keyexpr.join_autocanonize(&KeyExpr::new(&zid.to_string())?)?,
+            None,
+        )?;
+        Ok(Self { zid, publisher })
     }
 
-    pub fn serialize_payload<T: Serialize>(&self, value: &T) -> AtomicResult<Vec<u8>, S::Error> {
-        let serializer = self.serializer.lock().atomic_lock()?;
-        serializer.serialize(value).atomic()
+    pub fn zid(&self) -> ZId {
+        self.zid
+    }
+
+    pub fn put<S: Serializer>(
+        &self,
+        payload: Vec<u8>,
+        serializer: &S,
+    ) -> Result<(), PutError<S::Error>> {
+        let packet = MessagePacket::new(payload, self.zid);
+        let payload = serializer
+            .serialize(&packet)
+            .map_err(PutError::Serialization)
+            .and_then(|v| v.try_into_zbytes().map_err(PutError::Zenoh))?;
+        self.publisher.put(payload, None).map_err(PutError::Zenoh)
     }
 }
