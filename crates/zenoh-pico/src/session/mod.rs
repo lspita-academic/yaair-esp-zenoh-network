@@ -11,8 +11,7 @@ use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
     z_close, z_close_options_t, z_declare_publisher, z_declare_querier, z_info_peers_zid,
     z_info_zid, z_open, z_open_options_default, z_open_options_t, z_publisher_options_t,
-    z_querier_options_t, z_queryable_options_t, z_session_drop, z_session_is_closed,
-    z_session_move, z_subscriber_options_t,
+    z_querier_options_t, z_queryable_options_t, z_session_is_closed, z_subscriber_options_t,
 };
 
 use crate::{
