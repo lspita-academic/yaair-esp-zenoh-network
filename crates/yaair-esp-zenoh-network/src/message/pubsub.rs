@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub struct MessageSubscriber {
-    _subscriber: Subscriber, // store it to keep it alive
+    subscriber: Subscriber,
 }
 
 impl MessageSubscriber {
@@ -35,15 +35,18 @@ impl MessageSubscriber {
             SampleClosure::from_callback(Self::on_message::<S>, Some(context.clone()))?,
             None,
         )?;
-        Ok(Self {
-            _subscriber: subscriber,
-        })
+        Ok(Self { subscriber })
+    }
+
+    pub fn subscriber(&self) -> &Subscriber {
+        &self.subscriber
     }
 
     unsafe extern "C" fn on_message<S: Serializer>(
         sample: *const <Sample as ZValue>::Value,
         context: *const NetworkContext<S>,
     ) {
+        log::info!("Received message");
         let sample = Sample::zclone(sample);
         let context = unsafe { &*context };
 
@@ -57,9 +60,11 @@ impl MessageSubscriber {
             }
         };
 
-        if let Err(e) = context.messages.store(sender, message) {
-            log::warn!("Failed to store message: {e}");
-            return;
+        log::info!("Message sender: {sender}");
+        log::debug!("Message: {message:?}");
+        match context.messages.store(sender, message) {
+            Ok(_) => log::info!("Message stored successfully"),
+            Err(e) => log::warn!("Failed to store message: {e}"),
         }
     }
 }
@@ -89,6 +94,10 @@ impl MessagePublisher {
 
     pub fn zid(&self) -> ZId {
         self.zid
+    }
+
+    pub fn publisher(&self) -> &Publisher {
+        &self.publisher
     }
 
     pub fn put<S: Serializer>(

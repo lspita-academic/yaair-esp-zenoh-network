@@ -4,7 +4,7 @@ pub mod store;
 use serde::{Deserialize, Serialize};
 use zenoh_pico::zid::ZId;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     payload: Vec<u8>,
 }

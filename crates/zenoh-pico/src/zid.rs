@@ -14,11 +14,15 @@ use crate::{
 };
 
 #[zwrap(base(name = "id"), zvalue, zclone)]
-#[derive(Copy)]
+#[derive(Debug, Copy)]
 pub struct ZId;
 
 impl ZId {
     const SIZE: usize = ZENOH_ID_SIZE as usize;
+
+    pub fn new(bytes: [u8; Self::SIZE]) -> Self {
+        Self::from_zvalue(_z_id_t { id: bytes })
+    }
 }
 
 #[zwrap(base(name = "closure_zid"), zvalue, zown, zclosure(callback_ty = <ZId as ZValue>::Value))]

@@ -68,25 +68,33 @@ impl<'a, S: Serializer> ZenohPicoNetwork<'a, S> {
 
 impl<S: Serializer> Network<ZId, S> for ZenohPicoNetwork<'_, S> {
     fn prepare_outbound(&mut self, outbound_message: Vec<u8>) {
+        let keyexpr = self.messages_publisher.publisher().keyexpr();
+        log::info!("Publishing message to {keyexpr}");
         let message = Message::new(outbound_message);
-        if let Err(e) = self
+        log::debug!("Message: {message:?}");
+        match self
             .messages_publisher
             .put(message, &self.context.serializer)
         {
-            let zid = self.messages_publisher.zid();
-            log::warn!("Error sending message from {zid}: {e}")
+            Ok(_) => log::info!("Message published successfully"),
+            Err(e) => log::warn!("Error publishing message: {e}")
         }
     }
 
     fn prepare_inbound(&mut self) -> InboundMessage<ZId> {
         let messages = &self.context.messages;
+        log::info!("Preparing snapshot of messages");
         let snapshot = match messages.clear_dead().and_then(|_| messages.snapshot()) {
-            Ok(s) => s,
+            Ok(s) => {
+                log::info!("Snapshot created successfully");
+                s
+            }
             Err(e) => {
                 log::warn!("Error creating messages snapshot: {e}");
                 return Default::default();
             }
         };
+        log::info!("Creating inbound message");
         let inbound_message_map = snapshot
             .into_iter()
             .map(|(key, value)| {
@@ -101,6 +109,9 @@ impl<S: Serializer> Network<ZId, S> for ZenohPicoNetwork<'_, S> {
                 )
             })
             .collect();
-        InboundMessage::new(inbound_message_map)
+        let inbound_message = InboundMessage::new(inbound_message_map);
+        log::info!("Inbound message created");
+        log::debug!("Inbound message: {inbound_message:?}");
+        inbound_message
     }
 }

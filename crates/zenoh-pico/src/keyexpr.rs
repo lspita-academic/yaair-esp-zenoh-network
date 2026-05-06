@@ -1,14 +1,18 @@
-use std::str::FromStr;
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
-    _z_declared_keyexpr_t, z_keyexpr_equals, z_keyexpr_from_substr,
+    _z_declared_keyexpr_t, z_keyexpr_as_view_string, z_keyexpr_equals, z_keyexpr_from_substr,
     z_keyexpr_from_substr_autocanonize, z_keyexpr_join,
 };
 
 use crate::{
     result::{IntoZenohResult, ZenohError, ZenohResult},
-    zvalue::{ZOwn, ZValue},
+    zstring::ZString,
+    zvalue::{ZOwn, ZValue, ZView},
 };
 
 #[zwrap(base(name = "keyexpr"), zvalue(value_ty = _z_declared_keyexpr_t), zown, zclone)]
@@ -37,6 +41,15 @@ impl KeyExpr {
             z_keyexpr_join(z, self.zloan(), other.zloan()).into_zresult()
         })?;
         Ok(keyexpr)
+    }
+}
+
+impl Display for KeyExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut string_view = <ZString as ZView>::ViewValue::default();
+        unsafe { z_keyexpr_as_view_string(self.zloan(), &mut string_view).into_zresult() }
+            .map_err(|_| fmt::Error)
+            .and_then(|_| ZString::from_zview(string_view).fmt(f))
     }
 }
 
