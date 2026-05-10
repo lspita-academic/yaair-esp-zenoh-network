@@ -17,10 +17,12 @@ use crate::{
 #[derive(Debug, Copy)]
 pub struct ZId;
 
-impl ZId {
-    const SIZE: usize = ZENOH_ID_SIZE as usize;
+pub type ZIdBytes = [u8; ZId::SIZE];
 
-    pub fn new(bytes: [u8; Self::SIZE]) -> Self {
+impl ZId {
+    pub const SIZE: usize = ZENOH_ID_SIZE as usize;
+
+    pub fn new(bytes: ZIdBytes) -> Self {
         Self::from_zvalue(_z_id_t { id: bytes })
     }
 }
@@ -83,7 +85,7 @@ impl<'de> Deserialize<'de> for ZId {
         struct BytesArrayVisitor;
 
         impl<'de> Visitor<'de> for BytesArrayVisitor {
-            type Value = [u8; ZId::SIZE];
+            type Value = ZIdBytes;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_fmt(format_args!("an array of {} bytes", ZId::SIZE))

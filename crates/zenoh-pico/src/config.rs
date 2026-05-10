@@ -7,12 +7,13 @@ use zenoh_pico_macros::zwrap;
 use zenoh_pico_sys::{
     Z_CONFIG_CONNECT_KEY, Z_CONFIG_LISTEN_KEY, Z_CONFIG_MODE_KEY, Z_CONFIG_MULTICAST_LOCATOR_KEY,
     Z_CONFIG_MULTICAST_SCOUTING_KEY, Z_CONFIG_SCOUTING_TIMEOUT_KEY, Z_CONFIG_SCOUTING_WHAT_KEY,
-    z_config_default, zp_config_insert,
+    Z_CONFIG_SESSION_ZID_KEY, z_config_default, zp_config_insert,
 };
 
 use crate::{
     entities::whatami::WhatAmIMask,
     result::{IntoZenohResult, ZenohResult},
+    zid::ZIdBytes,
     zvalue::{ZOwn, ZValue},
 };
 
@@ -34,6 +35,7 @@ pub enum ConfigKey {
     MulticastScouting = Z_CONFIG_MULTICAST_SCOUTING_KEY,
     MulticastLocator = Z_CONFIG_MULTICAST_LOCATOR_KEY,
     ScoutingMask = Z_CONFIG_SCOUTING_WHAT_KEY,
+    SessionZId = Z_CONFIG_SESSION_ZID_KEY,
 }
 
 impl Into<u8> for ConfigKey {
@@ -96,6 +98,13 @@ impl ConfigBuilder {
     pub fn scouting_mask(mut self, what_mask: WhatAmIMask) -> Self {
         self.options
             .insert(ConfigKey::ScoutingMask, what_mask.to_string());
+        self
+    }
+
+    pub fn session_zid(mut self, id: ZIdBytes) -> Self {
+        let bytes_string = hex::encode(id);
+        self.options
+            .insert(ConfigKey::SessionZId, bytes_string);
         self
     }
 

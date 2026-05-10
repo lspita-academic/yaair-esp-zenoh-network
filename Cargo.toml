@@ -27,6 +27,7 @@ esp-idf-svc = { version = "0.52", features = [
 ] }
 ffi-utils = { path = "crates/ffi-utils" }
 heapless = "0.9"
+hex = "0.4"
 itertools = "0.14.0"
 log = "0.4"
 macro-utils = { path = "crates/macro-utils" }

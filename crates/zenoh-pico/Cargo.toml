@@ -7,6 +7,7 @@ rust-version.workspace = true
 [dependencies]
 embassy-sync.workspace = true
 ffi-utils.workspace = true
+hex.workspace = true
 log.workspace = true
 num_enum.workspace = true
 serde.workspace = true
