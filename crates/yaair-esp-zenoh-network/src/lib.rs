@@ -68,7 +68,7 @@ impl<S: Serializer> Network<ZId> for ZenohPicoNetwork<'_, S> {
     fn prepare_outbound(&mut self, outbound_message: Vec<u8>) {
         let keyexpr = self.messages_publisher.publisher().keyexpr();
         log::info!("Publishing message to {keyexpr}");
-        log::debug!("Message: {outbound_message:?}");
+        log::info!("Payload size: {}", outbound_message.len());
         match self
             .messages_publisher
             .put(outbound_message, &self.context.serializer)

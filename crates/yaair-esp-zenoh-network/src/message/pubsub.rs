@@ -48,7 +48,7 @@ impl MessageSubscriber {
         let payload_bytes = sample.payload().owned_bytes();
         let MessagePacket {
             sender,
-            payload: message,
+            payload,
         } = match context.serializer.deserialize(&payload_bytes) {
             Ok(p) => p,
             Err(e) => {
@@ -57,9 +57,9 @@ impl MessageSubscriber {
             }
         };
 
-        log::info!("Message sender: {sender}");
-        log::debug!("Message: {message:?}");
-        match context.messages.store(sender, message) {
+        log::info!("Sender: {sender}");
+        log::info!("Payload size: {}", payload.len());
+        match context.messages.store(sender, payload) {
             Ok(_) => log::info!("Message stored successfully"),
             Err(e) => log::warn!("Failed to store message: {e}"),
         }

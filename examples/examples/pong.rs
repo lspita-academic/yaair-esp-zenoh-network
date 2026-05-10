@@ -23,7 +23,7 @@ async fn pong(session: &'static Session) {
         log::info!("Waiting ping");
         let sample = subscriber.recv_async().await;
         let bytes = sample.payload().owned_bytes();
-        log::info!("Serialized ping: {bytes:?}");
+        log::info!("Serialized ping size: {}", bytes.len());
         let ping: usize = postcard::from_bytes(&bytes).expect("Failed to deserialize ping");
         log::info!("Received ping: {ping}");
 
@@ -32,7 +32,7 @@ async fn pong(session: &'static Session) {
         let pong = ping + 1;
         log::info!("Publishing pong: {pong}");
         let bytes = postcard::to_allocvec(&pong).expect("Failed to serialize pong");
-        log::info!("Serialized pong: {bytes:?}");
+        log::info!("Serialized pong size: {}", bytes.len());
         let payload = bytes
             .try_into_zbytes()
             .expect("Failed to create pong payload");
