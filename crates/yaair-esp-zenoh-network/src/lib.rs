@@ -1,15 +1,14 @@
 mod message;
 
-use std::{collections::HashMap, marker::PhantomData, sync::Arc, time::Duration};
+use std::{marker::PhantomData, sync::Arc, time::Duration};
 
 use yaair::yaair::{
-    messages::{inbound::InboundMessage, path::Path, serializer::Serializer, valuetree::ValueTree},
+    messages::{inbound::InboundMessage, serializer::Serializer},
     network::Network,
 };
 use zenoh_pico::{keyexpr::KeyExpr, result::ZenohResult, session::Session, zid::ZId};
 
 use crate::message::{
-    Message,
     pubsub::{MessagePublisher, MessageSubscriber},
     store::AtomicMessagesStore,
 };
@@ -69,14 +68,13 @@ impl<S: Serializer> Network<ZId> for ZenohPicoNetwork<'_, S> {
     fn prepare_outbound(&mut self, outbound_message: Vec<u8>) {
         let keyexpr = self.messages_publisher.publisher().keyexpr();
         log::info!("Publishing message to {keyexpr}");
-        let message = Message::new(outbound_message);
-        log::debug!("Message: {message:?}");
+        log::debug!("Message: {outbound_message:?}");
         match self
             .messages_publisher
-            .put(message, &self.context.serializer)
+            .put(outbound_message, &self.context.serializer)
         {
             Ok(_) => log::info!("Message published successfully"),
-            Err(e) => log::warn!("Error publishing message: {e}")
+            Err(e) => log::warn!("Error publishing message: {e}"),
         }
     }
 
@@ -94,20 +92,26 @@ impl<S: Serializer> Network<ZId> for ZenohPicoNetwork<'_, S> {
             }
         };
         log::info!("Creating inbound message");
-        let inbound_message_map = snapshot
+        let inbound_message_map = match snapshot
             .into_iter()
-            .map(|(key, value)| {
-                let message: Message = value.into();
-                (
-                    key,
-                    ValueTree::new(HashMap::from([(
-                        // TODO: ask what this path is
-                        Path::new(Vec::<String>::default()),
-                        message.into(),
-                    )])),
-                )
+            .map(|(zid, message)| {
+                let bytes: Vec<_> = message.into();
+                self.context
+                    .serializer
+                    .deserialize(&bytes)
+                    .map(|m| (zid, m))
             })
-            .collect();
+            .collect::<Result<_, _>>()
+        {
+            Ok(m) => {
+                log::info!("Messages deserialized successfully");
+                m
+            }
+            Err(e) => {
+                log::warn!("Error deserializing messages: {e}");
+                return Default::default();
+            }
+        };
         let inbound_message = InboundMessage::new(inbound_message_map);
         log::info!("Inbound message created");
         log::debug!("Inbound message: {inbound_message:?}");

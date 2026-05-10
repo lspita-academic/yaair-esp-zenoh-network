@@ -15,10 +15,7 @@ use zenoh_pico::{
     zvalue::{ZClone, ZClosure, ZValue},
 };
 
-use crate::{
-    NetworkContext,
-    message::{Message, MessagePacket},
-};
+use crate::{NetworkContext, message::MessagePacket};
 
 pub struct MessageSubscriber {
     _subscriber: Subscriber, // keep alive
@@ -35,7 +32,9 @@ impl MessageSubscriber {
             SampleClosure::from_callback(Self::on_message::<S>, Some(context.clone()))?,
             None,
         )?;
-        Ok(Self { _subscriber: subscriber })
+        Ok(Self {
+            _subscriber: subscriber,
+        })
     }
 
     unsafe extern "C" fn on_message<S: Serializer>(
@@ -47,8 +46,10 @@ impl MessageSubscriber {
         let context = unsafe { &*context };
 
         let payload_bytes = sample.payload().owned_bytes();
-        let MessagePacket { sender, message } = match context.serializer.deserialize(&payload_bytes)
-        {
+        let MessagePacket {
+            sender,
+            payload: message,
+        } = match context.serializer.deserialize(&payload_bytes) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("Failed to deserialize message packet: {e}");
@@ -94,10 +95,10 @@ impl MessagePublisher {
 
     pub fn put<S: Serializer>(
         &self,
-        message: Message,
+        payload: Vec<u8>,
         serializer: &S,
     ) -> Result<(), PutError<S::Error>> {
-        let packet = MessagePacket::new(message, self.zid);
+        let packet = MessagePacket::new(payload, self.zid);
         let payload = serializer
             .serialize(&packet)
             .map_err(PutError::Serialization)

@@ -7,18 +7,16 @@ use std::{
 use thiserror::Error;
 use zenoh_pico::zid::ZId;
 
-use crate::message::Message;
-
 #[derive(Clone)]
 pub struct StoreMessage {
-    message: Message,
+    payload: Vec<u8>,
     timestamp: SystemTime,
 }
 
 impl StoreMessage {
-    pub fn new(message: Message) -> Self {
+    pub fn new(payload: Vec<u8>) -> Self {
         let timestamp = SystemTime::now();
-        Self { message, timestamp }
+        Self { payload, timestamp }
     }
 
     pub fn timestamp(&self) -> SystemTime {
@@ -26,15 +24,15 @@ impl StoreMessage {
     }
 }
 
-impl From<Message> for StoreMessage {
-    fn from(value: Message) -> Self {
+impl From<Vec<u8>> for StoreMessage {
+    fn from(value: Vec<u8>) -> Self {
         StoreMessage::new(value)
     }
 }
 
-impl Into<Message> for StoreMessage {
-    fn into(self) -> Message {
-        self.message
+impl Into<Vec<u8>> for StoreMessage {
+    fn into(self) -> Vec<u8> {
+        self.payload
     }
 }
 
@@ -61,8 +59,8 @@ impl AtomicMessagesStore {
         self.storage.lock().map_err(|_| PoisonedLockError)
     }
 
-    pub fn store(&self, zid: ZId, message: Message) -> Result<(), PoisonedLockError> {
-        let store_message = StoreMessage::new(message);
+    pub fn store(&self, zid: ZId, payload: Vec<u8>) -> Result<(), PoisonedLockError> {
+        let store_message = StoreMessage::new(payload);
         self.acquire_storage()?.insert(zid, store_message);
         Ok(())
     }
@@ -71,11 +69,11 @@ impl AtomicMessagesStore {
         let mut storage = self.acquire_storage()?;
         let expired_keys: Vec<_> = storage
             .iter()
-            .map(|(key, m)| (key, m.timestamp()))
-            .filter_map(|(key, t)| {
+            .map(|(zid, m)| (zid, m.timestamp()))
+            .filter_map(|(zid, t)| {
                 t.elapsed().ok().and_then(|e| {
                     if e >= self.lifespan {
-                        Some(key.clone())
+                        Some(zid.clone())
                     } else {
                         None
                     }
