@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use yaair::yaair::messages::{outbound::OutboundMessage, serializer::Serializer};
+use serde::Deserialize;
+use yaair::yaair::messages::serializer::Serializer;
 use zenoh_pico::{
     keyexpr::KeyExpr,
     result::{ZenohError, ZenohResult},
@@ -10,7 +11,6 @@ use zenoh_pico::{
         pubsub::{Publisher, Subscriber},
     },
     zbytes::TryIntoZBytes,
-    zid::ZId,
     zvalue::{ZClone, ZClosure, ZValue},
 };
 
@@ -20,15 +20,20 @@ pub struct MessageSubscriber {
     _subscriber: Subscriber, // keep alive
 }
 
+pub struct MessageSubscriberOptions<T, S> {
+    pub callback: fn(T, &NetworkContext<S>),
+    pub context: Arc<NetworkContext<S>>,
+}
+
 impl MessageSubscriber {
-    pub fn new<S: Serializer>(
+    pub fn new<T: for<'de> Deserialize<'de>, S: Serializer>(
         session: &Session,
         base_keyexpr: &KeyExpr,
-        context: Arc<NetworkContext<S>>,
+        context: MessageSubscriberOptions<T, S>,
     ) -> ZenohResult<Self> {
         let subscriber = session.declare_subscriber(
             &base_keyexpr.join_autocanonize(&KeyExpr::new("*")?)?,
-            SampleClosure::from_callback(Self::on_message::<S>, Some(context.clone()))?,
+            SampleClosure::from_callback(Self::on_message::<T, S>, Some(Arc::new(context)))?,
             None,
         )?;
         Ok(Self {
@@ -36,33 +41,24 @@ impl MessageSubscriber {
         })
     }
 
-    unsafe extern "C" fn on_message<S: Serializer>(
+    unsafe extern "C" fn on_message<T: for<'de> Deserialize<'de>, S: Serializer>(
         sample: *const <Sample as ZValue>::Value,
-        context: *const NetworkContext<S>,
+        options: *const MessageSubscriberOptions<T, S>,
     ) {
         log::info!("Received message");
         let sample = Sample::zclone(sample);
-        let context = unsafe { &*context };
+        let options = unsafe { &*options };
 
         let payload_bytes = sample.payload().owned_bytes();
         log::debug!("Payload size: {}", payload_bytes.len());
-        let outbound_message: OutboundMessage<ZId> =
-            match context.serializer.deserialize(&payload_bytes) {
-                Ok(p) => p,
-                Err(e) => {
-                    log::warn!("Failed to deserialize message packet: {e}");
-                    return;
-                }
-            };
-
-        log::info!("Sender: {}", outbound_message.sender);
-        match context
-            .messages
-            .store(outbound_message.sender, outbound_message.into_inner())
-        {
-            Ok(_) => log::info!("Message stored successfully"),
-            Err(e) => log::warn!("Failed to store message: {e}"),
-        }
+        let message: T = match options.context.serializer.deserialize(&payload_bytes) {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!("Failed to deserialize message packet: {e}");
+                return;
+            }
+        };
+        (options.callback)(message, &options.context);
     }
 }
 

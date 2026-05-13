@@ -4,13 +4,16 @@ mod messages;
 use std::{sync::Arc, time::Duration};
 
 use yaair::yaair::{
-    messages::{inbound::InboundMessage, serializer::Serializer, valuetree::ValueTree},
+    messages::{
+        inbound::InboundMessage, outbound::OutboundMessage, serializer::Serializer,
+        valuetree::ValueTree,
+    },
     network::Network,
 };
 use zenoh_pico::{keyexpr::KeyExpr, result::ZenohResult, session::Session, zid::ZId};
 
 use crate::{
-    comm::pubsub::{MessagePublisher, MessageSubscriber},
+    comm::pubsub::{MessagePublisher, MessageSubscriber, MessageSubscriberOptions},
     messages::store::AtomicMessagesStore,
 };
 
@@ -56,8 +59,14 @@ impl<'a, S: Serializer> ZenohPicoNetwork<'a, S> {
             session,
             &messages_keyexpr.join_autocanonize(&KeyExpr::new(&zid.to_string())?)?,
         )?;
-        let messages_subscriber =
-            MessageSubscriber::new(session, &messages_keyexpr, context.clone())?;
+        let messages_subscriber = MessageSubscriber::new(
+            session,
+            &messages_keyexpr,
+            MessageSubscriberOptions {
+                callback: Self::on_outbound_message,
+                context: context.clone(),
+            },
+        )?;
 
         Ok(Self {
             session,
@@ -65,6 +74,17 @@ impl<'a, S: Serializer> ZenohPicoNetwork<'a, S> {
             messages_publisher,
             _messages_subscriber: messages_subscriber,
         })
+    }
+
+    fn on_outbound_message(outbound_message: OutboundMessage<ZId>, context: &NetworkContext<S>) {
+        log::info!("Sender: {}", outbound_message.sender);
+        match context
+            .messages
+            .store(outbound_message.sender, outbound_message.into_inner())
+        {
+            Ok(_) => log::info!("Message stored successfully"),
+            Err(e) => log::warn!("Failed to store message: {e}"),
+        }
     }
 }
 
