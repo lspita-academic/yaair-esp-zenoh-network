@@ -2451,7 +2451,7 @@ dependencies = [
 
 [[package]]
 name = "yaair"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "serde",
 ]
@@ -2470,7 +2470,7 @@ dependencies = [
 
 [[package]]
 name = "yaair_serde"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "serde",
  "serde_json",

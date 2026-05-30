@@ -42,7 +42,7 @@ syn = "2.0"
 thiserror = "2.0"
 uhlc = "0.9"
 uuid = "1.23"
-yaair = "0.3"
+yaair = "0.4"
 yaair-esp-zenoh-network = { path = "crates/yaair-esp-zenoh-network" }
 yaair_serde = "0.2"
 zenoh-pico = { path = "crates/zenoh-pico" }
