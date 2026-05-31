@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "examples/*"]
+default-members = ["crates/yaair-esp-zenoh-network"]
 
 [workspace.package]
 version = "0.1.0"
