@@ -718,7 +718,6 @@ name = "esp-idf-config"
 version = "0.1.0"
 dependencies = [
  "embuild",
- "zenoh-pico-sys",
 ]
 
 [[package]]
